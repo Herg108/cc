@@ -19,5 +19,7 @@ export function createInitialBoard() {
       black: { kingSide: true, queenSide: true },
     },
     moveCount: 0,
+    modifierData: {},   // arbitrary per-modifier persistent state
+    boardEffects: [],   // [{ r, c, type, color }] rendered as square overlays
   }
 }

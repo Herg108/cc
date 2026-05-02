@@ -218,3 +218,18 @@ export function isCheckmate(gameState, color, ownModifiers = [], attackerModifie
   }
   return true
 }
+
+export function getWinner(gameState) {
+  let whiteKing = false, blackKing = false
+  for (const row of gameState.squares) {
+    for (const p of row) {
+      if (p?.type === 'king') {
+        if (p.color === 'white') whiteKing = true
+        else blackKing = true
+      }
+    }
+  }
+  if (!blackKing) return 'white'
+  if (!whiteKing) return 'black'
+  return null
+}
