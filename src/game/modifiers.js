@@ -1,5 +1,10 @@
 // --- helpers ---
 
+function portalArrow(fromR, fromC, toR, toC) {
+  const dr = Math.sign(toR - fromR), dc = Math.sign(toC - fromC)
+  return ({ '-1,-1':'↖','-1,0':'↑','-1,1':'↗','0,-1':'←','0,1':'→','1,-1':'↙','1,0':'↓','1,1':'↘' })[`${dr},${dc}`] ?? '·'
+}
+
 function getAllPortalSquares(gameState) {
   const squares = []
   for (const color of ['white', 'black']) {
@@ -17,6 +22,51 @@ function getAllPortalPairs(gameState) {
     if (d?.portal1 && d?.portal2) pairs.push([d.portal1, d.portal2])
   }
   return pairs
+}
+
+// Follow portal chain from (fromR, fromC), modifying squares in place.
+// Returns true if the piece moved, false otherwise.
+function applyPortalChain(squares, gameState, fromR, fromC) {
+  const pairs = getAllPortalPairs(gameState)
+  if (pairs.length === 0) return false
+
+  let r = fromR, c = fromC
+  const visited = new Set([`${r},${c}`])
+  let moved = false
+
+  while (true) {
+    const piece = squares[r][c]
+    if (!piece) break
+
+    // Prefer pairs where the current square is the entry (portal1) so chains go forward
+    const sorted = [...pairs].sort(([p1a], [p1b]) =>
+      (p1a[0] === r && p1a[1] === c ? -1 : 1) - (p1b[0] === r && p1b[1] === c ? -1 : 1)
+    )
+
+    let teleported = false
+    for (const [[p1r, p1c], [p2r, p2c]] of sorted) {
+      let destR, destC
+      if (r === p1r && c === p1c) { destR = p2r; destC = p2c }
+      else if (r === p2r && c === p2c) { destR = p1r; destC = p1c }
+      else continue
+
+      const key = `${destR},${destC}`
+      if (visited.has(key)) continue
+      const dest = squares[destR][destC]
+      if (dest?.color === piece.color) break // friendly blocking exit
+
+      squares[destR][destC] = piece
+      squares[r][c] = null
+      visited.add(key)
+      r = destR; c = destC
+      teleported = true
+      moved = true
+      break
+    }
+    if (!teleported) break
+  }
+
+  return moved
 }
 
 // --- modifiers ---
@@ -141,16 +191,16 @@ export const ALL_MODIFIERS = [
 
       if (gameState.squares[r][c]) return null // must be empty
 
-      // Can't place on an existing portal square
       const existingPortals = getAllPortalSquares(gameState)
-      if (existingPortals.some(([pr, pc]) => pr === r && pc === c)) return null
+      const isExistingPortal = existingPortals.some(([pr, pc]) => pr === r && pc === c)
 
       if (!d.portal1) {
+        // First portal: placeholder label until partner is placed
         return {
           gameState: {
             ...gameState,
-            modifierData: { ...gameState.modifierData, [key]: { ...d, portal1: [r, c] } },
-            boardEffects: [...(gameState.boardEffects || []), { r, c, type: 'portal', owner: color, label: color === 'white' ? '1' : '2' }],
+            modifierData: { ...gameState.modifierData, [key]: { ...d, portal1: [r, c], portal1OnExisting: isExistingPortal } },
+            boardEffects: [...(gameState.boardEffects || []), { r, c, type: 'portal', owner: color, label: '○' }],
           },
           done: false,
         }
@@ -158,6 +208,16 @@ export const ALL_MODIFIERS = [
 
       if (r === d.portal1[0] && c === d.portal1[1]) return null // same as first portal
 
+      // If portal1 landed on an existing portal, portal2 must be a fresh square
+      if (d.portal1OnExisting && isExistingPortal) return null
+
+      // Update portal1's label to arrow pointing toward portal2, add portal2 with arrow toward portal1
+      const [p1r, p1c] = d.portal1
+      const updatedEffects = (gameState.boardEffects || []).map(e =>
+        e.type === 'portal' && e.owner === color && e.r === p1r && e.c === p1c && e.label === '○'
+          ? { ...e, label: portalArrow(p1r, p1c, r, c) }
+          : e
+      )
       return {
         gameState: {
           ...gameState,
@@ -165,7 +225,7 @@ export const ALL_MODIFIERS = [
             ...gameState.modifierData,
             [key]: { awaitingSelection: false, portal1: d.portal1, portal2: [r, c] },
           },
-          boardEffects: [...(gameState.boardEffects || []), { r, c, type: 'portal', owner: color, label: color === 'white' ? '1' : '2' }],
+          boardEffects: [...updatedEffects, { r, c, type: 'portal', owner: color, label: portalArrow(r, c, p1r, p1c) }],
         },
         done: true,
       }
@@ -193,62 +253,16 @@ export const ALL_MODIFIERS = [
 
     // Apply teleportation during check simulation so portal moves aren't incorrectly filtered
     applyDuringSimulation(gameState, move) {
-      const pairs = getAllPortalPairs(gameState)
-      if (pairs.length === 0) return gameState
-
-      const { toR, toC } = move
-
-      for (const [[p1r, p1c], [p2r, p2c]] of pairs) {
-        let destR, destC
-        if (toR === p1r && toC === p1c) { destR = p2r; destC = p2c }
-        else if (toR === p2r && toC === p2c) { destR = p1r; destC = p1c }
-        else continue
-
-        const squares = gameState.squares.map(row => [...row])
-        const piece = squares[toR][toC]
-        if (!piece) return gameState
-
-        const dest = squares[destR][destC]
-
-        if (dest?.color === piece.color) return gameState
-
-        squares[destR][destC] = piece
-        squares[toR][toC] = null
-
-        return { ...gameState, squares }
-      }
-
-      return gameState
+      const squares = gameState.squares.map(row => [...row])
+      const moved = applyPortalChain(squares, gameState, move.toR, move.toC)
+      return moved ? { ...gameState, squares } : gameState
     },
 
-    // Teleport any piece that lands on a portal
+    // Teleport any piece that lands on a portal, chaining through connected portals
     onAfterMove(gameState, move) {
-      const pairs = getAllPortalPairs(gameState)
-      if (pairs.length === 0) return gameState
-
-      const { toR, toC } = move
-
-      for (const [[p1r, p1c], [p2r, p2c]] of pairs) {
-        let destR, destC
-        if (toR === p1r && toC === p1c) { destR = p2r; destC = p2c }
-        else if (toR === p2r && toC === p2c) { destR = p1r; destC = p1c }
-        else continue
-
-        const squares = gameState.squares.map(row => [...row])
-        const piece = squares[toR][toC]
-        if (!piece) return gameState // already teleported by the other player's portal
-
-        const dest = squares[destR][destC]
-
-        if (dest?.color === piece.color) return gameState // friendly blocking exit
-
-        squares[destR][destC] = piece
-        squares[toR][toC] = null
-
-        return { ...gameState, squares }
-      }
-
-      return gameState
+      const squares = gameState.squares.map(row => [...row])
+      const moved = applyPortalChain(squares, gameState, move.toR, move.toC)
+      return moved ? { ...gameState, squares } : gameState
     },
   },
 ]

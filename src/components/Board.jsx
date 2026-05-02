@@ -89,7 +89,7 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
                   activationSelectMode.selectMode === 'piece'
                     ? piece?.color === activationSelectMode.color
                     : activationSelectMode.selectMode === 'emptySquare'
-                      ? !piece && !isPortal
+                      ? !piece
                       : false
                 )
 
@@ -127,7 +127,7 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
                             pointerEvents: 'none',
                             zIndex: 0,
                           }}>
-                            <span style={{ fontSize: 13, fontWeight: 900, color: pc.text, lineHeight: 1, zIndex: 2, textShadow: '0 1px 3px rgba(0,0,0,0.7)' }}>
+                            <span style={{ fontSize: 16, fontWeight: 900, color: pc.text, lineHeight: 1, zIndex: 2, textShadow: '0 1px 3px rgba(0,0,0,0.7)' }}>
                               {effect.label}
                             </span>
                           </div>
