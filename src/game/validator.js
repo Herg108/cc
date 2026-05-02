@@ -166,9 +166,17 @@ export function getLegalMoves(gameState, fromR, fromC, ownModifiers = [], attack
     return true
   })
 
-  return candidates.filter(([toR, toC]) =>
-    !isInCheck(simulateMove(gameState, fromR, fromC, toR, toC), piece.color, attackerModifiers)
-  )
+  // Deduplicate mods so globalEffect mods don't run twice
+  const simMods = [...new Map([...ownModifiers, ...attackerModifiers].map(m => [m.id, m])).values()]
+
+  return candidates.filter(([toR, toC]) => {
+    let simState = simulateMove(gameState, fromR, fromC, toR, toC)
+    const move = { fromR, fromC, toR, toC, piece, color: piece.color }
+    for (const mod of simMods) {
+      if (mod.applyDuringSimulation) simState = mod.applyDuringSimulation(simState, move) ?? simState
+    }
+    return !isInCheck(simState, piece.color, attackerModifiers)
+  })
 }
 
 export function applyMove(gameState, fromR, fromC, toR, toC) {

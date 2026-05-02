@@ -16,7 +16,12 @@ const EFFECT_STYLES = {
   void:      { bg: 'rgba(80, 0, 180, 0.5)' },
 }
 
-export default function Board({ gameState, onMove, disabled, ownModifiers = [], attackerModifiers = [], bombSelectMode = null, onBombSelect }) {
+const PORTAL_COLORS = {
+  white: { bg: 'rgba(0, 210, 230, 0.55)', text: '#fff' },
+  black: { bg: 'rgba(255, 130, 0, 0.55)',  text: '#fff' },
+}
+
+export default function Board({ gameState, onMove, disabled, ownModifiers = [], attackerModifiers = [], activationSelectMode = null, onActivationClick }) {
   const [selected, setSelected] = useState(null)
   const [legalMoves, setLegalMoves] = useState([])
 
@@ -26,8 +31,8 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
   }, [gameState])
 
   function handleClick(r, c) {
-    if (bombSelectMode) {
-      onBombSelect?.(r, c)
+    if (activationSelectMode) {
+      onActivationClick?.(r, c)
       return
     }
     if (disabled) return
@@ -36,20 +41,17 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
 
     if (selected) {
       const isLegal = legalMoves.some(([lr, lc]) => lr === r && lc === c)
-
       if (isLegal) {
         onMove(selected[0], selected[1], r, c)
         setSelected(null)
         setLegalMoves([])
         return
       }
-
       if (piece?.color === turn) {
         setSelected([r, c])
         setLegalMoves(getLegalMoves(gameState, r, c, ownModifiers, attackerModifiers))
         return
       }
-
       setSelected(null)
       setLegalMoves([])
       return
@@ -66,7 +68,6 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
       <div style={{ display: 'flex' }}>
-        {/* Rank labels */}
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', width: 20, paddingBottom: 24 }}>
           {[8,7,6,5,4,3,2,1].map(n => (
             <span key={n} style={{ color: '#888', fontSize: 12, textAlign: 'center', lineHeight: `${SQ}px` }}>{n}</span>
@@ -74,7 +75,6 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
         </div>
 
         <div>
-          {/* Board grid */}
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(8, ${SQ}px)`, gridTemplateRows: `repeat(8, ${SQ}px)`, border: '2px solid #555' }}>
             {gameState.squares.map((row, r) =>
               row.map((piece, c) => {
@@ -83,11 +83,20 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
                 const isLegal = legalMoves.some(([lr, lc]) => lr === r && lc === c)
                 const isCapture = isLegal && !!piece
                 const squareEffects = (gameState.boardEffects || []).filter(e => e.r === r && e.c === c)
-                const isBombTarget = bombSelectMode && piece?.color === bombSelectMode.color
+
+                const isPortal = (gameState.boardEffects || []).some(e => e.r === r && e.c === c && e.type === 'portal')
+                const isActivationTarget = activationSelectMode && (
+                  activationSelectMode.selectMode === 'piece'
+                    ? piece?.color === activationSelectMode.color
+                    : activationSelectMode.selectMode === 'emptySquare'
+                      ? !piece && !isPortal
+                      : false
+                )
 
                 let bg = light ? '#f0d9b5' : '#b58863'
                 if (isSel) bg = '#f6f669'
-                else if (isBombTarget) bg = light ? '#f0a080' : '#c06040'
+                else if (isActivationTarget && activationSelectMode.selectMode === 'piece') bg = light ? '#f0a080' : '#c06040'
+                else if (isActivationTarget && activationSelectMode.selectMode === 'emptySquare') bg = light ? '#c8a0f0' : '#8840c0'
                 else if (isLegal) bg = isCapture
                   ? (light ? '#e8a090' : '#c9614e')
                   : (light ? '#cdd96e' : '#aaa23a')
@@ -100,20 +109,39 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
                       width: SQ, height: SQ,
                       background: bg,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: isBombTarget ? 'crosshair' : disabled ? 'default' : 'pointer',
+                      cursor: isActivationTarget ? 'crosshair' : disabled ? 'default' : 'pointer',
                       fontSize: 48,
                       userSelect: 'none',
                       position: 'relative',
                     }}
                   >
-                    {squareEffects.map((effect, i) => (
-                      <div key={i} style={{
-                        position: 'absolute', inset: 0,
-                        background: EFFECT_STYLES[effect.type]?.bg ?? 'rgba(255,0,0,0.3)',
-                        pointerEvents: 'none',
-                        zIndex: 0,
-                      }} />
-                    ))}
+                    {squareEffects.map((effect, i) => {
+                      if (effect.type === 'portal') {
+                        const pc = PORTAL_COLORS[effect.owner] ?? PORTAL_COLORS.white
+                        return (
+                          <div key={i} style={{
+                            position: 'absolute', inset: 0,
+                            background: pc.bg,
+                            display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start',
+                            padding: '2px 4px',
+                            pointerEvents: 'none',
+                            zIndex: 0,
+                          }}>
+                            <span style={{ fontSize: 13, fontWeight: 900, color: pc.text, lineHeight: 1, zIndex: 2, textShadow: '0 1px 3px rgba(0,0,0,0.7)' }}>
+                              {effect.label}
+                            </span>
+                          </div>
+                        )
+                      }
+                      return (
+                        <div key={i} style={{
+                          position: 'absolute', inset: 0,
+                          background: EFFECT_STYLES[effect.type]?.bg ?? 'rgba(255,0,0,0.3)',
+                          pointerEvents: 'none',
+                          zIndex: 0,
+                        }} />
+                      )
+                    })}
                     {isLegal && !isCapture && (
                       <div style={{
                         width: 24, height: 24, borderRadius: '50%',
@@ -152,8 +180,7 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
             )}
           </div>
 
-          {/* File labels */}
-          <div style={{ display: 'flex', paddingLeft: 0 }}>
+          <div style={{ display: 'flex' }}>
             {files.map(f => (
               <span key={f} style={{ width: SQ, textAlign: 'center', color: '#888', fontSize: 12, paddingTop: 4 }}>{f}</span>
             ))}

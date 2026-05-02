@@ -20,15 +20,16 @@ export default function App() {
   const [customWinner, setCustomWinner] = useState(null)
 
   const opponent = game.turn === 'white' ? 'black' : 'white'
-  const ownMods = active[game.turn]
-  const attackerMods = active[opponent]
+
+  // Global-effect modifiers (like portals) apply to both sides' movement
+  const ownMods = [...active[game.turn], ...active[opponent].filter(m => m.globalEffect)]
+  const attackerMods = [...active[opponent], ...active[game.turn].filter(m => m.globalEffect)]
 
   const kingGone = getWinner(game)
   const mated = !customWinner && !kingGone && isCheckmate(game, game.turn, ownMods, attackerMods)
   const check = !mated && !customWinner && !kingGone && isInCheck(game, game.turn, attackerMods)
   const winner = customWinner || kingGone || (mated ? opponent : null)
 
-  // draft.selectingPiece = { color, key } when a player needs to click a piece after picking
   const selectingPiece = draft?.selectingPiece ?? null
 
   function applyAllHooks(hook, gameState, ...args) {
@@ -92,8 +93,7 @@ export default function App() {
     }
   }
 
-  // Called after a player has picked AND finished any piece selection
-  function advanceDraft(pickedMod, color, latestGame) {
+  function advanceDraft(pickedMod, color) {
     if (color === 'white') {
       if (draft.options.black.length > 0) {
         setDraft(prev => ({ ...prev, current: 'black', whitePick: pickedMod, selectingPiece: null }))
@@ -115,31 +115,24 @@ export default function App() {
     const nextGame = runHook(mod, 'onActivate', game, color)
     if (nextGame !== game) setGame(nextGame)
 
-    // Check if this modifier needs piece selection before advancing
     const selectionKey = `${mod.id}_${color}`
     if (nextGame.modifierData[selectionKey]?.awaitingSelection) {
       setDraft(prev => ({ ...prev, selectingPiece: { color, key: selectionKey, mod } }))
       return
     }
 
-    advanceDraft(mod, color, nextGame)
+    advanceDraft(mod, color)
   }
 
-  function handleBombSelect(r, c) {
-    const { color, key, mod } = selectingPiece
-    const piece = game.squares[r][c]
-    if (!piece || piece.color !== color) return
+  function handleActivationClick(r, c) {
+    const { mod, color } = selectingPiece
+    const result = mod.handleActivationClick?.(game, r, c, color)
+    if (!result) return // invalid click
 
-    const squares = game.squares.map(row => row.map(p => p ? { ...p } : null))
-    squares[r][c] = { ...piece, bomb: { owner: color, movesLeft: 5 } }
-
-    const nextGame = {
-      ...game,
-      squares,
-      modifierData: { ...game.modifierData, [key]: { awaitingSelection: false } },
+    setGame(result.gameState)
+    if (result.done) {
+      advanceDraft(mod, color)
     }
-    setGame(nextGame)
-    advanceDraft(mod, color, nextGame)
   }
 
   function reset() {
@@ -150,12 +143,17 @@ export default function App() {
     setCustomWinner(null)
   }
 
+  const activationSelectMode = selectingPiece
+    ? { selectMode: selectingPiece.mod.selectMode, color: selectingPiece.color }
+    : null
+
   let status = `${game.turn === 'white' ? 'White' : 'Black'} to move`
-  if (selectingPiece) status = `${selectingPiece.color === 'white' ? 'White' : 'Black'}: click a piece to plant the bomb`
+  if (selectingPiece) {
+    status = selectingPiece.mod.getSelectionPrompt?.(game, selectingPiece.color)
+      ?? `${selectingPiece.color}: click to select`
+  }
   if (check) status = `${game.turn === 'white' ? 'White' : 'Black'} is in check`
   if (winner) status = `${winner === 'white' ? 'White' : 'Black'} wins!`
-
-  const boardBombSelectMode = selectingPiece ? { color: selectingPiece.color } : null
 
   return (
     <div className="app">
@@ -170,8 +168,8 @@ export default function App() {
           disabled={!!winner || (!!draft && !selectingPiece)}
           ownModifiers={ownMods}
           attackerModifiers={attackerMods}
-          bombSelectMode={boardBombSelectMode}
-          onBombSelect={handleBombSelect}
+          activationSelectMode={activationSelectMode}
+          onActivationClick={handleActivationClick}
         />
         <ModifierList label="White" mods={active.white} />
       </div>
