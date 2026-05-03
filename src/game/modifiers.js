@@ -88,8 +88,8 @@ export const ALL_MODIFIERS = [
       }
     },
 
-    getSelectionPrompt(gameState, color) {
-      return `${color === 'white' ? 'White' : 'Black'}: click a piece to plant the bomb`
+    getSelectionPrompt() {
+      return 'Click on one of your pieces to plant the bomb'
     },
 
     handleActivationClick(gameState, r, c, color) {
@@ -147,18 +147,12 @@ export const ALL_MODIFIERS = [
         ...gameState,
         squares,
         boardEffects: [
-          ...(gameState.boardEffects || []).filter(e => e.type !== 'explosion'),
+          ...(gameState.boardEffects || []),
           ...explosionEffects,
         ],
       }
     },
 
-    onTurnStart(gameState) {
-      return {
-        ...gameState,
-        boardEffects: (gameState.boardEffects || []).filter(e => e.type !== 'explosion'),
-      }
-    },
   },
 
   {
@@ -181,8 +175,8 @@ export const ALL_MODIFIERS = [
     getSelectionPrompt(gameState, color) {
       const d = gameState.modifierData[`portal_${color}`]
       return d?.portal1
-        ? `${color === 'white' ? 'White' : 'Black'}: click a second empty square for the exit portal`
-        : `${color === 'white' ? 'White' : 'Black'}: click an empty square for the entry portal`
+        ? 'Place the second portal on any empty square'
+        : 'Place the first portal on any empty square'
     },
 
     handleActivationClick(gameState, r, c, color) {
@@ -195,12 +189,16 @@ export const ALL_MODIFIERS = [
       const isExistingPortal = existingPortals.some(([pr, pc]) => pr === r && pc === c)
 
       if (!d.portal1) {
-        // First portal: placeholder label until partner is placed
+        // First portal: if on existing portal, don't add a new effect (will update it when portal2 is placed)
         return {
           gameState: {
             ...gameState,
             modifierData: { ...gameState.modifierData, [key]: { ...d, portal1: [r, c], portal1OnExisting: isExistingPortal } },
-            boardEffects: [...(gameState.boardEffects || []), { r, c, type: 'portal', owner: color, label: '○' }],
+            boardEffects: isExistingPortal
+              ? (gameState.boardEffects || []).map(e =>
+                  e.type === 'portal' && e.r === r && e.c === c ? { ...e, label: '○' } : e
+                )
+              : [...(gameState.boardEffects || []), { r, c, type: 'portal', owner: color, label: '○' }],
           },
           done: false,
         }
@@ -213,11 +211,14 @@ export const ALL_MODIFIERS = [
 
       // Update portal1's label to arrow pointing toward portal2, add portal2 with arrow toward portal1
       const [p1r, p1c] = d.portal1
-      const updatedEffects = (gameState.boardEffects || []).map(e =>
-        e.type === 'portal' && e.owner === color && e.r === p1r && e.c === p1c && e.label === '○'
-          ? { ...e, label: portalArrow(p1r, p1c, r, c) }
-          : e
-      )
+      const updatedEffects = d.portal1OnExisting
+        // portal1 is on an existing portal: leave its arrow unchanged, it already shows the correct exit
+        ? (gameState.boardEffects || [])
+        : (gameState.boardEffects || []).map(e =>
+            e.type === 'portal' && e.owner === color && e.r === p1r && e.c === p1c && e.label === '○'
+              ? { ...e, label: portalArrow(p1r, p1c, r, c) }
+              : e
+          )
       return {
         gameState: {
           ...gameState,
@@ -225,7 +226,14 @@ export const ALL_MODIFIERS = [
             ...gameState.modifierData,
             [key]: { awaitingSelection: false, portal1: d.portal1, portal2: [r, c] },
           },
-          boardEffects: [...updatedEffects, { r, c, type: 'portal', owner: color, label: portalArrow(r, c, p1r, p1c) }],
+          boardEffects: isExistingPortal
+            // portal2 is on an existing portal: mark it as ○ to show it's a relay point
+            ? updatedEffects.map(e =>
+                e.type === 'portal' && e.r === r && e.c === c
+                  ? { ...e, label: '○' }
+                  : e
+              )
+            : [...updatedEffects, { r, c, type: 'portal', owner: color, label: portalArrow(r, c, p1r, p1c) }],
         },
         done: true,
       }
@@ -266,6 +274,10 @@ export const ALL_MODIFIERS = [
     },
   },
 ]
+
+export function getModifierById(id) {
+  return ALL_MODIFIERS.find(m => m.id === id) ?? null
+}
 
 export function getRandomModifiers(count, excludeIds = []) {
   const pool = ALL_MODIFIERS.filter(m => !excludeIds.includes(m.id))

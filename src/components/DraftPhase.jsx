@@ -1,7 +1,7 @@
-export default function DraftPhase({ pickingColor, options, activeModifiers, onPick }) {
-  const isWhite = pickingColor === 'white'
-  const label = isWhite ? 'White' : 'Black'
+import { useState } from 'react'
 
+export default function DraftPhase({ pickingColor, options, activeModifiers, onPick }) {
+  const [tooltip, setTooltip] = useState(null)
   return (
     <div style={{
       position: 'fixed', inset: 0,
@@ -11,7 +11,7 @@ export default function DraftPhase({ pickingColor, options, activeModifiers, onP
     }}>
       <div style={{
         background: '#16213e',
-        border: `2px solid ${isWhite ? '#e0e0e0' : '#555'}`,
+        border: '2px solid #2a3a6a',
         borderRadius: 12,
         padding: '32px 40px',
         maxWidth: 600,
@@ -20,12 +20,9 @@ export default function DraftPhase({ pickingColor, options, activeModifiers, onP
         flexDirection: 'column',
         gap: 24,
       }}>
-        <div>
-          <h2 style={{ fontSize: 22, color: isWhite ? '#fff' : '#aaa', marginBottom: 4 }}>
-            {label}'s Pick
-          </h2>
-          <p style={{ color: '#666', fontSize: 13 }}>Choose a modifier — it lasts the rest of the game</p>
-        </div>
+        <h2 style={{ fontSize: 22, color: '#fff', margin: 0 }}>
+          Pick a modifier
+        </h2>
 
         <div style={{ display: 'flex', gap: 12 }}>
           {options.map(mod => (
@@ -60,15 +57,45 @@ export default function DraftPhase({ pickingColor, options, activeModifiers, onP
             <p style={{ fontSize: 12, color: '#555', marginBottom: 8 }}>Active modifiers:</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {activeModifiers.map((m, i) => (
-                <span key={i} style={{
-                  background: '#1a2a4a',
-                  border: '1px solid #2a3a6a',
-                  borderRadius: 4,
-                  padding: '3px 10px',
-                  fontSize: 12,
-                  color: '#8ab',
-                }}>
+                <span
+                  key={i}
+                  onMouseEnter={() => setTooltip(i)}
+                  onMouseLeave={() => setTooltip(null)}
+                  style={{
+                    position: 'relative',
+                    background: '#1a2a4a',
+                    border: '1px solid #2a3a6a',
+                    borderRadius: 4,
+                    padding: '3px 10px',
+                    fontSize: 12,
+                    color: '#8ab',
+                    cursor: 'help',
+                  }}
+                >
                   {m.name}
+                  {tooltip === i && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '100%',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      marginBottom: 6,
+                      background: '#0d1b33',
+                      border: '1px solid #2a3a6a',
+                      borderRadius: 6,
+                      padding: '8px 10px',
+                      fontSize: 12,
+                      color: '#ccc',
+                      lineHeight: 1.5,
+                      width: 200,
+                      zIndex: 50,
+                      pointerEvents: 'none',
+                      whiteSpace: 'normal',
+                    }}>
+                      <div style={{ fontWeight: 700, color: '#fff', marginBottom: 4 }}>{m.name}</div>
+                      {m.description}
+                    </div>
+                  )}
                 </span>
               ))}
             </div>
