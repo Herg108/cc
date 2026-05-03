@@ -46,7 +46,7 @@ export default function Lobby({ socket, onJoined }) {
           ) : (
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 12, color: '#666', marginBottom: 10, letterSpacing: 1 }}>SHARE THIS CODE</div>
-              <div style={{ fontSize: 42, fontWeight: 900, letterSpacing: 10, color: '#fff', marginBottom: 12 }}>
+              <div style={{ fontSize: 42, fontWeight: 900, letterSpacing: 10, textIndent: 10, color: '#fff', marginBottom: 12 }}>
                 {createdCode}
               </div>
               <div style={{ fontSize: 12, color: '#555' }}>Waiting for opponent...</div>
@@ -90,6 +90,6 @@ const btnStyle = {
 }
 const inputStyle = {
   background: '#0f1929', border: '1px solid #2a3a6a', borderRadius: 6,
-  color: '#fff', padding: '10px 12px', fontSize: 24, letterSpacing: 8,
+  color: '#fff', padding: '10px 8px 10px 16px', fontSize: 24, letterSpacing: 8,
   width: 130, textAlign: 'center', outline: 'none',
 }

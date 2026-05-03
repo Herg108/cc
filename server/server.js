@@ -1,14 +1,26 @@
+import express from 'express'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
+import { fileURLToPath } from 'url'
+import path from 'path'
 import { createInitialBoard } from '../src/game/initialBoard.js'
 import { applyMove, isInCheck, isCheckmate, getWinner } from '../src/game/validator.js'
 import { ALL_MODIFIERS, getRandomModifiers } from '../src/game/modifiers.js'
 
 const DRAFT_EVERY = 7
 
-const io = new Server(createServer(), {
+const app = express()
+const httpServer = createServer(app)
+const io = new Server(httpServer, {
   cors: { origin: '*' },
 })
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../dist')))
+  app.get('*', (_, res) => res.sendFile(path.join(__dirname, '../dist/index.html')))
+}
 
 // rooms: { [code]: roomState }
 const rooms = {}
@@ -290,5 +302,6 @@ function advanceDraft(room, mod, color) {
   }
 }
 
-io.listen(3001)
-console.log('Server running on port 3001')
+const PORT = process.env.PORT || 3001
+httpServer.listen(PORT)
+console.log(`Server running on port ${PORT}`)
