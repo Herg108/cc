@@ -11,6 +11,7 @@ const SQ = 72
 const EFFECT_STYLES = {
   lava:      { bg: 'rgba(255, 80, 0, 0.45)' },
   explosion: { bg: 'rgba(255, 220, 0, 0.6)' },
+  fire:      { bg: 'rgba(255, 120, 0, 0.5)' },
   ice:       { bg: 'rgba(100, 200, 255, 0.35)' },
   poison:    { bg: 'rgba(100, 255, 80, 0.35)' },
   void:      { bg: 'rgba(80, 0, 180, 0.5)' },
@@ -184,6 +185,15 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
                         boxShadow: '0 0 4px #ff2200',
                       }}>
                         {piece.bomb.movesLeft}
+                      </div>
+                    )}
+                    {squareEffects.some(e => e.type === 'fire') && (
+                      <div style={{
+                        position: 'absolute', top: 3, left: 3,
+                        fontSize: 14, lineHeight: 1,
+                        zIndex: 5, pointerEvents: 'none',
+                      }}>
+                        🔥
                       </div>
                     )}
                     {piece && (

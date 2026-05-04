@@ -150,7 +150,23 @@ io.on('connection', (socket) => {
     const move = { fromR, fromC, toR, toC, piece, color: piece.color }
 
     let next = applyMove(game, fromR, fromC, toR, toC)
-    next = applyAllHooks('onAfterMove', next, activeIds, move)
+
+    // Phase 1: movement hooks — resolve final piece positions (e.g. portal teleportation)
+    let moveUpdate = {}
+    for (const color of ['white', 'black']) {
+      for (const mod of reconstructMods(activeIds[color])) {
+        if (!mod.onMovePieces) continue
+        const result = mod.onMovePieces(next, { ...move, ...moveUpdate })
+        if (result) {
+          next = result.gameState
+          if (result.moveUpdate) moveUpdate = { ...moveUpdate, ...result.moveUpdate }
+        }
+      }
+    }
+    const resolvedMove = { ...move, finalR: move.toR, finalC: move.toC, ...moveUpdate }
+
+    // Phase 2: effect hooks — react to final board state
+    next = applyAllHooks('onAfterMove', next, activeIds, resolvedMove)
 
     const w = checkCustomWin(next, activeIds)
     if (w) {

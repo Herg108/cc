@@ -1,5 +1,17 @@
 // --- helpers ---
 
+function getMovePath(move) {
+  const { fromR, fromC, toR, toC } = move
+  const dr = toR - fromR, dc = toC - fromC
+  if ((Math.abs(dr) === 2 && Math.abs(dc) === 1) || (Math.abs(dr) === 1 && Math.abs(dc) === 2)) return [[fromR, fromC], [toR, toC]] // knight jump
+  const path = [[fromR, fromC]]
+  const sr = Math.sign(dr), sc = Math.sign(dc)
+  let r = fromR + sr, c = fromC + sc
+  while (r !== toR || c !== toC) { path.push([r, c]); r += sr; c += sc }
+  path.push([toR, toC])
+  return path
+}
+
 function portalArrow(fromR, fromC, toR, toC) {
   const dr = Math.sign(toR - fromR), dc = Math.sign(toC - fromC)
   return ({ '-1,-1':'↖','-1,0':'↑','-1,1':'↗','0,-1':'←','0,1':'→','1,-1':'↙','1,0':'↓','1,1':'↘' })[`${dr},${dc}`] ?? '·'
@@ -19,32 +31,33 @@ function getAllPortalPairs(gameState) {
   const pairs = []
   for (const color of ['white', 'black']) {
     const d = gameState.modifierData[`portal_${color}`]
-    if (d?.portal1 && d?.portal2) pairs.push([d.portal1, d.portal2])
+    if (d?.portal1 && d?.portal2) pairs.push({ pair: [d.portal1, d.portal2], color })
   }
   return pairs
 }
 
 // Follow portal chain from (fromR, fromC), modifying squares in place.
-// Returns true if the piece moved, false otherwise.
+// Returns array of all positions visited (each hop), or null if no teleport occurred.
 function applyPortalChain(squares, gameState, fromR, fromC) {
   const pairs = getAllPortalPairs(gameState)
-  if (pairs.length === 0) return false
+  if (pairs.length === 0) return null
 
   let r = fromR, c = fromC
   const visited = new Set([`${r},${c}`])
-  let moved = false
+  const positions = []
 
   while (true) {
     const piece = squares[r][c]
     if (!piece) break
 
-    // Prefer pairs where the current square is the entry (portal1) so chains go forward
-    const sorted = [...pairs].sort(([p1a], [p1b]) =>
-      (p1a[0] === r && p1a[1] === c ? -1 : 1) - (p1b[0] === r && p1b[1] === c ? -1 : 1)
+    // Prefer the pair whose color owns the portal on the current square (first-placed wins)
+    const ownerColor = (gameState.boardEffects || []).find(e => e.type === 'portal' && e.r === r && e.c === c)?.owner
+    const sorted = [...pairs].sort((a, b) =>
+      (a.color === ownerColor ? -1 : 1) - (b.color === ownerColor ? -1 : 1)
     )
 
     let teleported = false
-    for (const [[p1r, p1c], [p2r, p2c]] of sorted) {
+    for (const { pair: [[p1r, p1c], [p2r, p2c]] } of sorted) {
       let destR, destC
       if (r === p1r && c === p1c) { destR = p2r; destC = p2c }
       else if (r === p2r && c === p2c) { destR = p1r; destC = p1c }
@@ -59,14 +72,14 @@ function applyPortalChain(squares, gameState, fromR, fromC) {
       squares[r][c] = null
       visited.add(key)
       r = destR; c = destC
+      positions.push({ r, c })
       teleported = true
-      moved = true
       break
     }
     if (!teleported) break
   }
 
-  return moved
+  return positions.length > 0 ? positions : null
 }
 
 // --- modifiers ---
@@ -241,7 +254,7 @@ export const ALL_MODIFIERS = [
 
     // Block sliding pieces from passing through any portal square
     modifyMoves(moves, piece, r, c, gameState) {
-      if (!['rook', 'bishop', 'queen'].includes(piece.type)) return moves
+      if (!['rook', 'bishop', 'queen', 'pawn'].includes(piece.type)) return moves
       const portals = getAllPortalSquares(gameState)
       if (portals.length === 0) return moves
 
@@ -262,15 +275,148 @@ export const ALL_MODIFIERS = [
     // Apply teleportation during check simulation so portal moves aren't incorrectly filtered
     applyDuringSimulation(gameState, move) {
       const squares = gameState.squares.map(row => [...row])
-      const moved = applyPortalChain(squares, gameState, move.toR, move.toC)
-      return moved ? { ...gameState, squares } : gameState
+      const positions = applyPortalChain(squares, gameState, move.toR, move.toC)
+      return positions ? { ...gameState, squares } : gameState
     },
 
-    // Teleport any piece that lands on a portal, chaining through connected portals
-    onAfterMove(gameState, move) {
+    // Movement phase: teleport the piece and report final position + hop path
+    onMovePieces(gameState, move) {
+      // If the piece stepped onto fire at the portal, it dies there — no teleport
+      const piece = gameState.squares[move.toR][move.toC]
+      const boardEffects = gameState.boardEffects || []
+      if (piece && !piece.ignition && boardEffects.some(e => e.type === 'fire' && e.owner !== piece.color && e.r === move.toR && e.c === move.toC)) {
+        return null
+      }
+
       const squares = gameState.squares.map(row => [...row])
-      const moved = applyPortalChain(squares, gameState, move.toR, move.toC)
-      return moved ? { ...gameState, squares } : gameState
+      const positions = applyPortalChain(squares, gameState, move.toR, move.toC)
+      if (!positions) return null
+      const finalPos = positions[positions.length - 1]
+      return {
+        gameState: { ...gameState, squares },
+        moveUpdate: { finalR: finalPos.r, finalC: finalPos.c, portalPositions: positions },
+      }
+    },
+
+    // Effects phase: add fire at every portal hop if the teleported piece is ignited
+    onAfterMove(gameState, move) {
+      if (!move.portalPositions) return gameState
+
+      const exitPiece = gameState.squares[move.finalR][move.finalC]
+      if (!exitPiece?.ignition) return gameState
+
+      let boardEffects = gameState.boardEffects || []
+      let changed = false
+      for (const { r, c } of move.portalPositions) {
+        if (!boardEffects.some(e => e.type === 'fire' && e.r === r && e.c === c)) {
+          boardEffects = [...boardEffects, { r, c, type: 'fire', owner: exitPiece.ignition.owner }]
+          changed = true
+        }
+      }
+      return changed ? { ...gameState, boardEffects } : gameState
+    },
+  },
+
+  {
+    id: 'ignition',
+    name: 'Ignition',
+    description: 'Set one of your pieces on fire. Its square is always burning. When it moves, every square along its path catches fire for one turn and any opponent piece that steps on fire is destroyed.',
+    selectMode: 'piece',
+    globalEffect: true,
+
+    modifyMoves(moves, piece, r, c, gameState) {
+      if (!['rook', 'bishop', 'queen', 'pawn'].includes(piece.type)) return moves
+      if (piece.ignition) return moves  // ignited piece is immune to fire blocking
+      const fires = (gameState.boardEffects || []).filter(e => e.type === 'fire' && e.owner !== piece.color)
+      if (fires.length === 0) return moves
+      const fireSet = new Set(fires.map(e => `${e.r},${e.c}`))
+
+      return moves.filter(([toR, toC]) => {
+        const dr = Math.sign(toR - r)
+        const dc = Math.sign(toC - c)
+        let sr = r + dr, sc = c + dc
+        while (sr !== toR || sc !== toC) {
+          if (fireSet.has(`${sr},${sc}`)) return false
+          sr += dr; sc += dc
+        }
+        return true
+      })
+    },
+
+    onActivate(gameState, color) {
+      return {
+        ...gameState,
+        modifierData: {
+          ...gameState.modifierData,
+          [`ignition_${color}`]: { awaitingSelection: true },
+        },
+      }
+    },
+
+    getSelectionPrompt() {
+      return 'Click on one of your pieces to ignite it'
+    },
+
+    handleActivationClick(gameState, r, c, color) {
+      const piece = gameState.squares[r][c]
+      if (!piece || piece.color !== color) return null
+
+      const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
+      squares[r][c] = { ...piece, ignition: { owner: color } }
+
+      return {
+        gameState: {
+          ...gameState,
+          squares,
+          modifierData: { ...gameState.modifierData, [`ignition_${color}`]: { awaitingSelection: false } },
+          boardEffects: [...(gameState.boardEffects || []), { r, c, type: 'fire', owner: color }],
+        },
+        done: true,
+      }
+    },
+
+    onAfterMove(gameState, move, color) {
+      const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
+      let boardEffects = [...(gameState.boardEffects || [])]
+      let changed = false
+
+      // If this color's ignition piece moved, add fire trail
+      if (move.color === color && move.piece?.ignition?.owner === color) {
+        for (const [r, c] of getMovePath(move)) {
+          if (!boardEffects.some(e => e.type === 'fire' && e.owner === color && e.r === r && e.c === c)) {
+            boardEffects.push({ r, c, type: 'fire', owner: color })
+            changed = true
+          }
+        }
+      }
+
+      // Kill opponent piece if it ended up on this color's fire (finalR/finalC accounts for portal)
+      const finalR = move.finalR ?? move.toR
+      const finalC = move.finalC ?? move.toC
+      const fireAtDest = boardEffects.some(e => e.type === 'fire' && e.owner === color && e.r === finalR && e.c === finalC)
+      const destPiece = squares[finalR][finalC]
+      if (fireAtDest && destPiece && destPiece.color !== color && !destPiece.ignition) {
+        squares[finalR][finalC] = null
+        changed = true
+      }
+
+      return changed ? { ...gameState, squares, boardEffects } : gameState
+    },
+
+    onTurnStart(gameState, color) {
+      // Clear this color's fire trail, then re-add fire at the ignition piece's current position
+      let boardEffects = (gameState.boardEffects || []).filter(e => !(e.type === 'fire' && e.owner === color))
+
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const p = gameState.squares[r][c]
+          if (p?.ignition?.owner === color) {
+            boardEffects = [...boardEffects, { r, c, type: 'fire', owner: color }]
+          }
+        }
+      }
+
+      return { ...gameState, boardEffects }
     },
   },
 ]

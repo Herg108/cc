@@ -142,7 +142,7 @@ export default function App() {
       <div className="status">{status}</div>
 
       <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start' }}>
-        <ModifierList label={playerColor} mods={active[playerColor]} />
+        <ModifierList label={playerColor} mods={active[playerColor]} side="left" />
         <Board
           gameState={game}
           onMove={handleMove}
@@ -153,7 +153,7 @@ export default function App() {
           onActivationClick={handleActivationClick}
           flipped={playerColor === 'black'}
         />
-        <ModifierList label={playerColor === 'white' ? 'black' : 'white'} mods={active[playerColor === 'white' ? 'black' : 'white']} />
+        <ModifierList label={playerColor === 'white' ? 'black' : 'white'} mods={active[playerColor === 'white' ? 'black' : 'white']} side="right" />
       </div>
 
       <button className="reset-btn" onClick={reset}>New Game</button>
@@ -170,7 +170,7 @@ export default function App() {
   )
 }
 
-function ModifierList({ label, mods }) {
+function ModifierList({ label, mods, side = 'left' }) {
   const [tooltip, setTooltip] = useState(null)
 
   return (
@@ -200,10 +200,10 @@ function ModifierList({ label, mods }) {
               <div style={{
                 position: 'absolute',
                 top: 0,
-                left: label === 'White' ? 'auto' : '100%',
-                right: label === 'White' ? '100%' : 'auto',
-                marginLeft: label === 'White' ? 0 : 8,
-                marginRight: label === 'White' ? 8 : 0,
+                left: side === 'right' ? 'auto' : '100%',
+                right: side === 'right' ? '100%' : 'auto',
+                marginLeft: side === 'right' ? 0 : 8,
+                marginRight: side === 'right' ? 8 : 0,
                 background: '#0d1b33',
                 border: '1px solid #2a3a6a',
                 borderRadius: 6,
