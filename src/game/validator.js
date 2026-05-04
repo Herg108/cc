@@ -106,15 +106,27 @@ export function isInCheck(gameState, color, attackerModifiers = []) {
     }
   }
   if (kingR === undefined) return false
+  if ((squares[kingR][kingC]?.invincible?.movesLeft ?? 0) > 1) return false
+
+  // At movesLeft === 1, detect threats by stripping invincibility so modifyMoves
+  // doesn't block enemies from "seeing" the king's square during threat detection.
+  // Capture is still prevented separately via modifyMoves on the actual move list.
+  let threatState = gameState
+  if (squares[kingR][kingC]?.invincible) {
+    const newSquares = squares.map(row => [...row])
+    const { invincible, ...rest } = newSquares[kingR][kingC]
+    newSquares[kingR][kingC] = rest
+    threatState = { ...gameState, squares: newSquares }
+  }
 
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
-      const piece = squares[r][c]
+      const piece = threatState.squares[r][c]
       if (!piece || piece.color !== enemy) continue
 
-      let moves = getCandidateMoves(gameState, r, c)
+      let moves = getCandidateMoves(threatState, r, c)
       for (const mod of attackerModifiers) {
-        if (mod.modifyMoves) moves = mod.modifyMoves(moves, piece, r, c, gameState)
+        if (mod.modifyMoves) moves = mod.modifyMoves(moves, piece, r, c, threatState)
       }
 
       if (moves.some(([mr, mc]) => mr === kingR && mc === kingC)) return true

@@ -152,8 +152,18 @@ export const ALL_MODIFIERS = [
         for (let dc = -1; dc <= 1; dc++) {
           const nr = explodeR + dr, nc = explodeC + dc
           if (nr < 0 || nr > 7 || nc < 0 || nc > 7) continue
-          if (!squares[nr][nc]?.invincible) squares[nr][nc] = null
           explosionEffects.push({ r: nr, c: nc, type: 'explosion' })
+          const p = squares[nr][nc]
+          if (!p) continue
+          if (p.invincible) {
+            // Invincible piece survives; if it's the bomber, consume the bomb
+            if (nr === explodeR && nc === explodeC) {
+              const { bomb, ...rest } = p
+              squares[nr][nc] = rest
+            }
+          } else {
+            squares[nr][nc] = null
+          }
         }
       }
 
@@ -255,7 +265,7 @@ export const ALL_MODIFIERS = [
 
     // Block sliding pieces from passing through any portal square
     modifyMoves(moves, piece, r, c, gameState) {
-      if (!['rook', 'bishop', 'queen', 'pawn'].includes(piece.type)) return moves
+      if (!['rook', 'bishop', 'queen', 'pawn', 'king'].includes(piece.type)) return moves
       const portals = getAllPortalSquares(gameState)
       if (portals.length === 0) return moves
 
