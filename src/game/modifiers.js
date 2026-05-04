@@ -67,6 +67,7 @@ function applyPortalChain(squares, gameState, fromR, fromC) {
       if (visited.has(key)) continue
       const dest = squares[destR][destC]
       if (dest?.color === piece.color) break // friendly blocking exit
+      if (dest?.invincible && dest.color !== piece.color) break // invincible enemy blocks exit
 
       squares[destR][destC] = piece
       squares[r][c] = null
@@ -151,7 +152,7 @@ export const ALL_MODIFIERS = [
         for (let dc = -1; dc <= 1; dc++) {
           const nr = explodeR + dr, nc = explodeC + dc
           if (nr < 0 || nr > 7 || nc < 0 || nc > 7) continue
-          squares[nr][nc] = null
+          if (!squares[nr][nc]?.invincible) squares[nr][nc] = null
           explosionEffects.push({ r: nr, c: nc, type: 'explosion' })
         }
       }
@@ -284,7 +285,7 @@ export const ALL_MODIFIERS = [
       // If the piece stepped onto fire at the portal, it dies there — no teleport
       const piece = gameState.squares[move.toR][move.toC]
       const boardEffects = gameState.boardEffects || []
-      if (piece && !piece.ignition && boardEffects.some(e => e.type === 'fire' && e.owner !== piece.color && e.r === move.toR && e.c === move.toC)) {
+      if (piece && !piece.ignition && !piece.invincible && boardEffects.some(e => e.type === 'fire' && e.owner !== piece.color && e.r === move.toR && e.c === move.toC)) {
         return null
       }
 
@@ -386,23 +387,49 @@ export const ALL_MODIFIERS = [
       const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
       let boardEffects = [...(gameState.boardEffects || [])]
       let changed = false
+      const finalR = move.finalR ?? move.toR
+      const finalC = move.finalC ?? move.toC
 
-      // If this color's ignition piece moved, add fire trail
       if (move.color === color && move.piece?.ignition?.owner === color) {
-        for (const [r, c] of getMovePath(move)) {
+        // Add fire along full path including start square
+        const path = getMovePath(move)
+        for (const [r, c] of path) {
           if (!boardEffects.some(e => e.type === 'fire' && e.owner === color && e.r === r && e.c === c)) {
             boardEffects.push({ r, c, type: 'fire', owner: color })
             changed = true
           }
         }
+
+        // Kill any non-invincible, non-ignited piece on trail fire (e.g. rook during castling)
+        for (const [r, c] of path) {
+          if (r === finalR && c === finalC) continue // skip the ignited piece itself
+          const p = squares[r][c]
+          if (p && !p.invincible && !p.ignition &&
+              boardEffects.some(e => e.type === 'fire' && e.owner === color && e.r === r && e.c === c)) {
+            squares[r][c] = null
+            changed = true
+          }
+        }
       }
 
-      // Kill opponent piece if it ended up on this color's fire (finalR/finalC accounts for portal)
-      const finalR = move.finalR ?? move.toR
-      const finalC = move.finalC ?? move.toC
+      // Castling with ignited rook: move fire from rook's old square to new square
+      if (move.color === color && move.piece?.type === 'king' && Math.abs(move.toC - move.fromC) === 2) {
+        const row = move.fromR
+        const rookOldC = move.toC > move.fromC ? 7 : 0
+        const rookNewC = move.toC > move.fromC ? move.toC - 1 : move.toC + 1
+        const rook = squares[row][rookNewC]
+        if (rook?.ignition?.owner === color) {
+          if (!boardEffects.some(e => e.type === 'fire' && e.owner === color && e.r === row && e.c === rookNewC)) {
+            boardEffects.push({ r: row, c: rookNewC, type: 'fire', owner: color })
+            changed = true
+          }
+        }
+      }
+
+      // Kill opponent piece if it landed on this color's fire (finalR/finalC accounts for portal)
       const fireAtDest = boardEffects.some(e => e.type === 'fire' && e.owner === color && e.r === finalR && e.c === finalC)
       const destPiece = squares[finalR][finalC]
-      if (fireAtDest && destPiece && destPiece.color !== color && !destPiece.ignition) {
+      if (fireAtDest && destPiece && destPiece.color !== color && !destPiece.ignition && !destPiece.invincible) {
         squares[finalR][finalC] = null
         changed = true
       }
@@ -424,6 +451,81 @@ export const ALL_MODIFIERS = [
       }
 
       return { ...gameState, boardEffects }
+    },
+  },
+
+  {
+    id: 'invincibility',
+    name: 'Invincibility',
+    description: 'Choose one of your pieces to become invincible for 3 of your moves. It cannot be captured or killed by any effect.',
+    selectMode: 'piece',
+    globalEffect: true,
+
+    onActivate(gameState, color) {
+      return {
+        ...gameState,
+        modifierData: {
+          ...gameState.modifierData,
+          [`invincibility_${color}`]: { awaitingSelection: true },
+        },
+      }
+    },
+
+    getSelectionPrompt() {
+      return 'Click on one of your pieces to make it invincible'
+    },
+
+    handleActivationClick(gameState, r, c, color) {
+      const piece = gameState.squares[r][c]
+      if (!piece || piece.color !== color) return null
+
+      const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
+      squares[r][c] = { ...piece, invincible: { owner: color, movesLeft: 3 } }
+
+      return {
+        gameState: {
+          ...gameState,
+          squares,
+          modifierData: { ...gameState.modifierData, [`invincibility_${color}`]: { awaitingSelection: false } },
+        },
+        done: true,
+      }
+    },
+
+    modifyMoves(moves, piece, r, c, gameState) {
+      const blocked = new Set()
+      for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+          const p = gameState.squares[row][col]
+          if (p?.invincible && p.color !== piece.color) blocked.add(`${row},${col}`)
+        }
+      }
+      if (blocked.size === 0) return moves
+      return moves.filter(([toR, toC]) => !blocked.has(`${toR},${toC}`))
+    },
+
+    onAfterMove(gameState, move, color) {
+      if (move.color !== color) return gameState
+
+      const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
+      let changed = false
+
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const p = squares[r][c]
+          if (!p?.invincible || p.invincible.owner !== color) continue
+          const movesLeft = p.invincible.movesLeft - 1
+          if (movesLeft <= 0) {
+            const { invincible, ...rest } = p
+            squares[r][c] = rest
+          } else {
+            squares[r][c] = { ...p, invincible: { ...p.invincible, movesLeft } }
+          }
+          changed = true
+        }
+      }
+
+      return changed ? { ...gameState, squares } : gameState
     },
   },
 ]

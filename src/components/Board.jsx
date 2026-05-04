@@ -174,6 +174,19 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
                       </>
 
                     )}
+                    {piece?.invincible && (
+                      <div style={{
+                        position: 'absolute', top: 3, right: 3,
+                        background: '#f0c000', color: '#000',
+                        borderRadius: '50%', width: 18, height: 18,
+                        fontSize: 11, fontWeight: 700,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        zIndex: 5, pointerEvents: 'none',
+                        boxShadow: '0 0 4px #f0c000',
+                      }}>
+                        {piece.invincible.movesLeft}
+                      </div>
+                    )}
                     {piece?.bomb && (
                       <div style={{
                         position: 'absolute', top: 3, right: 3,
