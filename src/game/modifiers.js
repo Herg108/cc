@@ -292,6 +292,13 @@ export const ALL_MODIFIERS = [
       const positions = applyPortalChain(squares, gameState, move.toR, move.toC)
       if (!positions) return null
       const finalPos = positions[positions.length - 1]
+
+      // Explicitly preserve modifier properties on the teleported piece
+      const exitPiece = squares[finalPos.r][finalPos.c]
+      if (exitPiece && exitPiece.color === move.piece.color) {
+        squares[finalPos.r][finalPos.c] = { ...move.piece, type: exitPiece.type }
+      }
+
       return {
         gameState: { ...gameState, squares },
         moveUpdate: { finalR: finalPos.r, finalC: finalPos.c, portalPositions: positions },
@@ -308,7 +315,7 @@ export const ALL_MODIFIERS = [
       let boardEffects = gameState.boardEffects || []
       let changed = false
       for (const { r, c } of move.portalPositions) {
-        if (!boardEffects.some(e => e.type === 'fire' && e.r === r && e.c === c)) {
+        if (!boardEffects.some(e => e.type === 'fire' && e.owner === exitPiece.ignition.owner && e.r === r && e.c === c)) {
           boardEffects = [...boardEffects, { r, c, type: 'fire', owner: exitPiece.ignition.owner }]
           changed = true
         }
