@@ -151,7 +151,7 @@ io.on('connection', (socket) => {
 
     let next = applyMove(game, fromR, fromC, toR, toC)
 
-    // Phase 1: movement hooks — resolve final piece positions (e.g. portal teleportation)
+    // Phase 1a: movement hooks — resolve final piece positions (e.g. portal teleportation)
     let moveUpdate = {}
     for (const color of ['white', 'black']) {
       for (const mod of reconstructMods(activeIds[color])) {
@@ -163,6 +163,19 @@ io.on('connection', (socket) => {
         }
       }
     }
+
+    // Phase 1b: late movement hooks — snap-back after portals have resolved (e.g. boomerang)
+    for (const color of ['white', 'black']) {
+      for (const mod of reconstructMods(activeIds[color])) {
+        if (!mod.onLateMovePieces) continue
+        const result = mod.onLateMovePieces(next, { ...move, ...moveUpdate })
+        if (result) {
+          next = result.gameState
+          if (result.moveUpdate) moveUpdate = { ...moveUpdate, ...result.moveUpdate }
+        }
+      }
+    }
+
     const resolvedMove = { ...move, finalR: move.toR, finalC: move.toC, ...moveUpdate }
 
     // Phase 2: effect hooks — react to final board state

@@ -187,6 +187,9 @@ export function getLegalMoves(gameState, fromR, fromC, ownModifiers = [], attack
     for (const mod of simMods) {
       if (mod.applyDuringSimulation) simState = mod.applyDuringSimulation(simState, move) ?? simState
     }
+    for (const mod of simMods) {
+      if (mod.applyLateSimulation) simState = mod.applyLateSimulation(simState, move) ?? simState
+    }
     return !isInCheck(simState, piece.color, attackerModifiers)
   })
 }

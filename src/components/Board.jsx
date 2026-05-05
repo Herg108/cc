@@ -174,41 +174,35 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
                       </>
 
                     )}
-                    {piece?.invincible && (
-                      <div style={{
-                        position: 'absolute', top: 3, right: 3,
-                        background: '#f0c000', color: '#000',
+                    {[
+                      piece?.invincible && { bg: '#f0c000', color: '#000', label: piece.invincible.movesLeft },
+                      piece?.bomb      && { bg: '#ff2200', color: '#fff', label: piece.bomb.movesLeft },
+                    ].filter(Boolean).map((badge, i) => (
+                      <div key={i} style={{
+                        position: 'absolute', top: 3 + i * 21, right: 3,
+                        background: badge.bg, color: badge.color,
                         borderRadius: '50%', width: 18, height: 18,
                         fontSize: 11, fontWeight: 700,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         zIndex: 5, pointerEvents: 'none',
-                        boxShadow: '0 0 4px #f0c000',
+                        boxShadow: `0 0 4px ${badge.bg}`,
                       }}>
-                        {piece.invincible.movesLeft}
+                        {badge.label}
                       </div>
-                    )}
-                    {piece?.bomb && (
-                      <div style={{
-                        position: 'absolute', top: 3, right: 3,
-                        background: '#ff2200', color: '#fff',
-                        borderRadius: '50%', width: 18, height: 18,
-                        fontSize: 11, fontWeight: 700,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        zIndex: 3, pointerEvents: 'none',
-                        boxShadow: '0 0 4px #ff2200',
-                      }}>
-                        {piece.bomb.movesLeft}
-                      </div>
-                    )}
-                    {squareEffects.some(e => e.type === 'fire') && (
-                      <div style={{
-                        position: 'absolute', top: 3, left: 3,
-                        fontSize: 14, lineHeight: 1,
+                    ))}
+                    {[
+                      squareEffects.some(e => e.type === 'fire') && { content: '🔥', fontSize: 14, color: null },
+                      piece?.boomerang && { content: '↩', fontSize: 12, color: piece.boomerang.isBoomerang ? '#ff3300' : '#ffffff' },
+                    ].filter(Boolean).map((ind, i) => (
+                      <div key={i} style={{
+                        position: 'absolute', top: 3 + i * 19, left: 3,
+                        fontSize: ind.fontSize, lineHeight: 1,
                         zIndex: 5, pointerEvents: 'none',
+                        ...(ind.color ? { color: ind.color, textShadow: '0 1px 3px rgba(0,0,0,0.8)' } : {}),
                       }}>
-                        🔥
+                        {ind.content}
                       </div>
-                    )}
+                    ))}
                     {piece && (
                       <span style={{
                         color: piece.color === 'white' ? '#fff' : '#1a1a1a',

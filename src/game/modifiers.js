@@ -538,6 +538,96 @@ export const ALL_MODIFIERS = [
       return changed ? { ...gameState, squares } : gameState
     },
   },
+
+  {
+    id: 'boomerang',
+    name: 'Boomerang',
+    description: 'Choose a piece. It alternates between normal moves and boomerang moves. On a boomerang move, it travels to the target then snaps back home.',
+    selectMode: 'piece',
+
+    onActivate(gameState, color) {
+      return {
+        ...gameState,
+        modifierData: {
+          ...gameState.modifierData,
+          [`boomerang_${color}`]: { awaitingSelection: true },
+        },
+      }
+    },
+
+    getSelectionPrompt() {
+      return 'Click on one of your pieces to give it the boomerang'
+    },
+
+    handleActivationClick(gameState, r, c, color) {
+      const piece = gameState.squares[r][c]
+      if (!piece || piece.color !== color) return null
+
+      const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
+      squares[r][c] = { ...piece, boomerang: { owner: color, isBoomerang: true } }
+
+      return {
+        gameState: {
+          ...gameState,
+          squares,
+          modifierData: { ...gameState.modifierData, [`boomerang_${color}`]: { awaitingSelection: false } },
+        },
+        done: true,
+      }
+    },
+
+    // Runs after all onMovePieces (e.g. portals) have resolved the final position
+    onLateMovePieces(gameState, move) {
+      if (!move.piece?.boomerang?.isBoomerang) return null
+      const curR = move.finalR ?? move.toR
+      const curC = move.finalC ?? move.toC
+      if (curR === move.fromR && curC === move.fromC) return null
+
+      // If the piece landed on enemy fire after following portals, it dies — don't snap back
+      const piece = gameState.squares[curR][curC]
+      const boardEffects = gameState.boardEffects || []
+      if (piece && !piece.ignition && !piece.invincible &&
+          boardEffects.some(e => e.type === 'fire' && e.owner !== piece.color && e.r === curR && e.c === curC)) {
+        const squares = gameState.squares.map(row => [...row])
+        squares[curR][curC] = null
+        return {
+          gameState: { ...gameState, squares },
+          moveUpdate: { finalR: curR, finalC: curC },
+        }
+      }
+
+      const squares = gameState.squares.map(row => [...row])
+      squares[move.fromR][move.fromC] = squares[curR][curC]
+      squares[curR][curC] = null
+      return {
+        gameState: { ...gameState, squares },
+        moveUpdate: { finalR: move.fromR, finalC: move.fromC },
+      }
+    },
+
+    // Runs after portal's applyDuringSimulation has resolved teleports
+    applyLateSimulation(gameState, move) {
+      if (!move.piece?.boomerang?.isBoomerang) return gameState
+      const curR = move.finalR ?? move.toR
+      const curC = move.finalC ?? move.toC
+      if (curR === move.fromR && curC === move.fromC) return gameState
+      const squares = gameState.squares.map(row => [...row])
+      squares[move.fromR][move.fromC] = squares[curR][curC]
+      squares[curR][curC] = null
+      return { ...gameState, squares }
+    },
+
+    onAfterMove(gameState, move, color) {
+      if (move.color !== color || !move.piece?.boomerang) return gameState
+      const finalR = move.finalR ?? move.toR
+      const finalC = move.finalC ?? move.toC
+      const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
+      const p = squares[finalR][finalC]
+      if (!p?.boomerang) return gameState
+      squares[finalR][finalC] = { ...p, boomerang: { ...p.boomerang, isBoomerang: !p.boomerang.isBoomerang } }
+      return { ...gameState, squares }
+    },
+  },
 ]
 
 export function getModifierById(id) {
