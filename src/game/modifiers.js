@@ -310,6 +310,11 @@ export const ALL_MODIFIERS = [
         squares[finalPos.r][finalPos.c] = { ...move.piece, type: exitPiece.type }
       }
 
+      // Promote pawn if it reached the back rank via portal
+      if (squares[finalPos.r][finalPos.c]?.type === 'pawn' && (finalPos.r === 0 || finalPos.r === 7)) {
+        squares[finalPos.r][finalPos.c] = { ...squares[finalPos.r][finalPos.c], type: 'queen' }
+      }
+
       return {
         gameState: { ...gameState, squares },
         moveUpdate: { finalR: finalPos.r, finalC: finalPos.c, portalPositions: positions },
