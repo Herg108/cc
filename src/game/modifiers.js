@@ -633,6 +633,126 @@ export const ALL_MODIFIERS = [
       return { ...gameState, squares }
     },
   },
+
+  {
+    id: 'wraparound',
+    name: 'Wraparound',
+    description: 'Choose a piece. It can move off the left or right edge of the board and emerge from the opposite side.',
+    selectMode: 'piece',
+
+    onActivate(gameState, color) {
+      return {
+        ...gameState,
+        modifierData: { ...gameState.modifierData, [`wraparound_${color}`]: { awaitingSelection: true } },
+      }
+    },
+
+    getSelectionPrompt() {
+      return 'Click on one of your pieces to give it wraparound movement'
+    },
+
+    handleActivationClick(gameState, r, c, color) {
+      const piece = gameState.squares[r][c]
+      if (!piece || piece.color !== color) return null
+      const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
+      squares[r][c] = { ...piece, wraparound: { owner: color } }
+      return {
+        gameState: {
+          ...gameState,
+          squares,
+          modifierData: { ...gameState.modifierData, [`wraparound_${color}`]: { awaitingSelection: false } },
+        },
+        done: true,
+      }
+    },
+
+    modifyMoves(moves, piece, r, c, gameState) {
+      if (!piece.wraparound) return moves
+      const { squares } = gameState
+
+      if (['rook', 'bishop', 'queen'].includes(piece.type)) {
+        const dirs = {
+          rook:   [[-1,0],[1,0],[0,-1],[0,1]],
+          bishop: [[-1,-1],[-1,1],[1,-1],[1,1]],
+          queen:  [[-1,-1],[-1,1],[1,-1],[1,1],[-1,0],[1,0],[0,-1],[0,1]],
+        }[piece.type]
+        const extra = []
+        for (const [dr, dc] of dirs) {
+          let nr = r + dr, nc = c + dc
+          let traveled = 0
+          while (nr >= 0 && nr < 8 && nc >= 0 && nc < 8) {
+            if (squares[nr][nc]) { nr = -1; break }
+            traveled++
+            nr += dr; nc += dc
+          }
+          if (nr === -1) continue
+          // Only wrap if the column (not the row) exited the board
+          if (nr < 0 || nr >= 8) continue
+          nc = ((nc % 8) + 8) % 8
+          // Continue in the same direction, wrapping only the column
+          while (nr >= 0 && nr < 8 && (nr !== r || nc !== c)) {
+            const target = squares[nr][nc]
+            if (target) {
+              if (target.color !== piece.color) extra.push([nr, nc])
+              break
+            }
+            extra.push([nr, nc])
+            nr += dr
+            nc = ((nc + dc) % 8 + 8) % 8
+          }
+        }
+        return [...moves, ...extra]
+      }
+
+      if (piece.type === 'knight') {
+        const extra = []
+        for (const [dr, dc] of [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]) {
+          const nr = r + dr, nc = c + dc
+          if (nr < 0 || nr >= 8) continue // no top/bottom wrap
+          if (nc >= 0 && nc < 8) continue // normal move, already in base moves
+          const wrappedC = ((nc % 8) + 8) % 8
+          if (!squares[nr][wrappedC] || squares[nr][wrappedC].color !== piece.color) {
+            extra.push([nr, wrappedC])
+          }
+        }
+        return [...moves, ...extra]
+      }
+
+      if (piece.type === 'pawn') {
+        const dir = piece.color === 'white' ? -1 : 1
+        const extra = []
+        for (const dc of [-1, 1]) {
+          if (c + dc < 0 || c + dc > 7) {
+            const nr = r + dir
+            const nc = ((c + dc) % 8 + 8) % 8
+            if (nr >= 0 && nr < 8) {
+              const target = squares[nr][nc]
+              if (target && target.color !== piece.color) extra.push([nr, nc])
+            }
+          }
+        }
+        return [...moves, ...extra]
+      }
+
+      if (piece.type === 'king') {
+        const extra = []
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            if (dr === 0 && dc === 0) continue
+            const rawR = r + dr, rawC = c + dc
+            if (rawR >= 0 && rawR < 8 && rawC >= 0 && rawC < 8) continue
+            if (rawR < 0 || rawR >= 8) continue // no top/bottom wrap
+            const nc = ((rawC % 8) + 8) % 8
+            if (!squares[rawR][nc] || squares[rawR][nc].color !== piece.color) extra.push([rawR, nc])
+          }
+        }
+        return [...moves, ...extra]
+      }
+
+      return moves
+    },
+  },
+
 ]
 
 export function getModifierById(id) {

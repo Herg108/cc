@@ -193,6 +193,7 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
                     {[
                       squareEffects.some(e => e.type === 'fire') && { content: '🔥', fontSize: 14, color: null },
                       piece?.boomerang && { content: '↩', fontSize: 12, color: piece.boomerang.isBoomerang ? '#ff3300' : '#ffffff' },
+                      piece?.wraparound && { content: '↔', fontSize: 13, color: '#00ccff' },
                     ].filter(Boolean).map((ind, i) => (
                       <div key={i} style={{
                         position: 'absolute', top: 3 + i * 19, left: 3,

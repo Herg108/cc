@@ -59,6 +59,7 @@ export default function TestMode() {
   const [selectingPiece, setSelectingPiece] = useState(null)
   const [customWinner, setCustomWinner] = useState(null)
   const [history, setHistory] = useState([])
+  const [copied, setCopied] = useState(false)
 
   const opponent = game.turn === 'white' ? 'black' : 'white'
   const ownMods = [...active[game.turn], ...active[opponent].filter(m => m.globalEffect)]
@@ -136,6 +137,42 @@ export default function TestMode() {
     setCustomWinner(null)
   }
 
+  function copyPosition() {
+    const files = ['a','b','c','d','e','f','g','h']
+    const ranks = [8,7,6,5,4,3,2,1]
+    const lines = []
+    for (let r = 0; r < 8; r++) {
+      const row = []
+      for (let c = 0; c < 8; c++) {
+        const p = game.squares[r][c]
+        if (p) {
+          const symbol = p.type[0].toUpperCase() + (p.type === 'knight' ? 'n' : '')
+          const tags = []
+          if (p.wraparound) tags.push('wrap')
+          if (p.boomerang) tags.push('boom')
+          if (p.ignition) tags.push('ignit')
+          if (p.invincible) tags.push(`inv(${p.invincible.movesLeft})`)
+          if (p.bomb) tags.push(`bomb(${p.bomb.movesLeft})`)
+          const tag = tags.length ? `[${tags.join(',')}]` : ''
+          row.push(`${p.color[0]}${p.type === 'knight' ? 'N' : p.type[0].toUpperCase()}${tag}@${files[c]}${ranks[r]}`)
+        }
+      }
+      if (row.length) lines.push(row.join(', '))
+    }
+    const activeMods = [
+      active.white.length ? `White: ${active.white.map(m => m.name).join(', ')}` : null,
+      active.black.length ? `Black: ${active.black.map(m => m.name).join(', ')}` : null,
+    ].filter(Boolean).join(' | ')
+    const text = [
+      `Turn: ${game.turn}`,
+      activeMods || 'No active modifiers',
+      lines.join('\n'),
+    ].join('\n')
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
   function reset() {
     setGame(createInitialBoard())
     setActive({ white: [], black: [] })
@@ -187,9 +224,10 @@ export default function TestMode() {
               </div>
             )
           })}
-          <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
+          <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
             <button onClick={undo} disabled={history.length === 0} style={btnStyle(history.length === 0 ? '#1a1a1a' : '#2a2a3a', history.length === 0 ? '#333' : '#aaa')}>Undo</button>
             <button onClick={reset} style={btnStyle('#2a2a3a', '#aaa')}>Reset</button>
+            <button onClick={copyPosition} style={btnStyle(copied ? '#1a3a1a' : '#2a2a3a', copied ? '#4f4' : '#aaa')}>{copied ? 'Copied!' : 'Copy Pos'}</button>
           </div>
         </div>
 
