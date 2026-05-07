@@ -16,7 +16,8 @@ function checkCustomWin(gameState, active) {
 
 function runMovePipeline(game, active, fromR, fromC, toR, toC) {
   const piece = game.squares[fromR][fromC]
-  const move = { fromR, fromC, toR, toC, piece, color: piece.color }
+  const capturedPiece = game.squares[toR][toC]
+  const move = { fromR, fromC, toR, toC, piece, color: piece.color, capturedPiece }
   let next = applyMove(game, fromR, fromC, toR, toC)
 
   let moveUpdate = {}

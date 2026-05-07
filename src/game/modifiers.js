@@ -37,7 +37,8 @@ function getAllPortalPairs(gameState) {
 }
 
 // Follow portal chain from (fromR, fromC), modifying squares in place.
-// Returns array of all positions visited (each hop), or null if no teleport occurred.
+// Returns { positions, captures } or null if no teleport occurred.
+// captures: [{piece, prevR, prevC}] — each enemy overwritten at a hop, with the square the moving piece came from.
 function applyPortalChain(squares, gameState, fromR, fromC) {
   const pairs = getAllPortalPairs(gameState)
   if (pairs.length === 0) return null
@@ -45,6 +46,7 @@ function applyPortalChain(squares, gameState, fromR, fromC) {
   let r = fromR, c = fromC
   const visited = new Set([`${r},${c}`])
   const positions = []
+  const captures = []
 
   while (true) {
     const piece = squares[r][c]
@@ -69,6 +71,7 @@ function applyPortalChain(squares, gameState, fromR, fromC) {
       if (dest?.color === piece.color) break // friendly blocking exit
       if (dest?.invincible && dest.color !== piece.color) break // invincible enemy blocks exit
 
+      if (dest && dest.color !== piece.color) captures.push({ piece: dest, prevR: r, prevC: c })
       squares[destR][destC] = piece
       squares[r][c] = null
       visited.add(key)
@@ -80,7 +83,7 @@ function applyPortalChain(squares, gameState, fromR, fromC) {
     if (!teleported) break
   }
 
-  return positions.length > 0 ? positions : null
+  return positions.length > 0 ? { positions, captures } : null
 }
 
 // --- modifiers ---
@@ -111,7 +114,7 @@ export const ALL_MODIFIERS = [
       if (!piece || piece.color !== color) return null
 
       const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
-      squares[r][c] = { ...piece, bomb: { owner: color, movesLeft: 5 } }
+      squares[r][c] = { ...piece, bomb: { owner: color, movesLeft: 5 }, pieceBadges: [...(piece.pieceBadges || []), 'bomb'] }
 
       return {
         gameState: {
@@ -300,8 +303,9 @@ export const ALL_MODIFIERS = [
       }
 
       const squares = gameState.squares.map(row => [...row])
-      const positions = applyPortalChain(squares, gameState, move.toR, move.toC)
-      if (!positions) return null
+      const chain = applyPortalChain(squares, gameState, move.toR, move.toC)
+      if (!chain) return null
+      const { positions, captures } = chain
       const finalPos = positions[positions.length - 1]
 
       // Explicitly preserve modifier properties on the teleported piece
@@ -317,7 +321,7 @@ export const ALL_MODIFIERS = [
 
       return {
         gameState: { ...gameState, squares },
-        moveUpdate: { finalR: finalPos.r, finalC: finalPos.c, portalPositions: positions },
+        moveUpdate: { finalR: finalPos.r, finalC: finalPos.c, portalPositions: positions, portalCaptures: captures },
       }
     },
 
@@ -343,7 +347,7 @@ export const ALL_MODIFIERS = [
   {
     id: 'ignition',
     name: 'Ignition',
-    description: 'Set one of your pieces on fire. Its square is always burning. When it moves, every square along its path catches fire for one turn and any opponent piece that steps on fire is destroyed.',
+    description: 'Set one of your pieces on fire. Its square is always burning. When it moves, every square along its path catches fire for one turn — any unignited piece that steps on fire is destroyed.',
     selectMode: 'piece',
     globalEffect: true,
 
@@ -385,7 +389,7 @@ export const ALL_MODIFIERS = [
       if (!piece || piece.color !== color) return null
 
       const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
-      squares[r][c] = { ...piece, ignition: { owner: color } }
+      squares[r][c] = { ...piece, ignition: { owner: color }, pieceEffects: [...(piece.pieceEffects || []), 'ignition'] }
 
       return {
         gameState: {
@@ -406,8 +410,10 @@ export const ALL_MODIFIERS = [
       const finalC = move.finalC ?? move.toC
 
       if (move.color === color && move.piece?.ignition?.owner === color) {
-        // Add fire along full path including start square
-        const path = getMovePath(move)
+        // Add fire along full path including start square and portal hops
+        const physPath = getMovePath(move)
+        const portalHops = (move.portalPositions || []).map(({ r, c }) => [r, c])
+        const path = [...physPath, ...portalHops]
         for (const [r, c] of path) {
           if (!boardEffects.some(e => e.type === 'fire' && e.owner === color && e.r === r && e.c === c)) {
             boardEffects.push({ r, c, type: 'fire', owner: color })
@@ -415,7 +421,7 @@ export const ALL_MODIFIERS = [
           }
         }
 
-        // Kill any non-invincible, non-ignited piece on trail fire (e.g. rook during castling)
+        // Kill any non-invincible, non-ignited piece on trail fire (e.g. rook during castling, or converted pieces)
         for (const [r, c] of path) {
           if (r === finalR && c === finalC) continue // skip the ignited piece itself
           const p = squares[r][c]
@@ -495,7 +501,7 @@ export const ALL_MODIFIERS = [
       if (!piece || piece.color !== color) return null
 
       const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
-      squares[r][c] = { ...piece, invincible: { owner: color, movesLeft: 3 } }
+      squares[r][c] = { ...piece, invincible: { owner: color, movesLeft: 3 }, pieceBadges: [...(piece.pieceBadges || []), 'invincible'] }
 
       return {
         gameState: {
@@ -569,7 +575,7 @@ export const ALL_MODIFIERS = [
       if (!piece || piece.color !== color) return null
 
       const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
-      squares[r][c] = { ...piece, boomerang: { owner: color, isBoomerang: true } }
+      squares[r][c] = { ...piece, boomerang: { owner: color, isBoomerang: true }, pieceEffects: [...(piece.pieceEffects || []), 'boomerang'] }
 
       return {
         gameState: {
@@ -655,7 +661,7 @@ export const ALL_MODIFIERS = [
       const piece = gameState.squares[r][c]
       if (!piece || piece.color !== color) return null
       const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
-      squares[r][c] = { ...piece, wraparound: { owner: color } }
+      squares[r][c] = { ...piece, wraparound: { owner: color }, pieceEffects: [...(piece.pieceEffects || []), 'wraparound'] }
       return {
         gameState: {
           ...gameState,
@@ -750,6 +756,57 @@ export const ALL_MODIFIERS = [
       }
 
       return moves
+    },
+  },
+
+  {
+    id: 'conversion',
+    name: 'Necromancer',
+    description: 'Choose a piece. When it captures an enemy, the enemy rises as your piece on the square the necromancer left.',
+    selectMode: 'piece',
+
+    onActivate(gameState, color) {
+      return {
+        ...gameState,
+        modifierData: { ...gameState.modifierData, [`conversion_${color}`]: { awaitingSelection: true } },
+      }
+    },
+
+    getSelectionPrompt() {
+      return 'Click on one of your pieces to give it conversion ability'
+    },
+
+    handleActivationClick(gameState, r, c, color) {
+      const piece = gameState.squares[r][c]
+      if (!piece || piece.color !== color) return null
+      const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
+      squares[r][c] = { ...piece, conversion: { owner: color }, pieceEffects: [...(piece.pieceEffects || []), 'conversion'] }
+      return {
+        gameState: {
+          ...gameState,
+          squares,
+          modifierData: { ...gameState.modifierData, [`conversion_${color}`]: { awaitingSelection: false } },
+        },
+        done: true,
+      }
+    },
+
+    onLateMovePieces(gameState, move) {
+      const { piece, capturedPiece, portalCaptures, fromR, fromC } = move
+      if (!piece?.conversion) return null
+      const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
+      let changed = false
+      if (capturedPiece && capturedPiece.type !== 'king') {
+        squares[fromR][fromC] = { ...capturedPiece, color: piece.conversion.owner }
+        changed = true
+      }
+      for (const { piece: captured, prevR, prevC } of (portalCaptures || [])) {
+        if (captured.type !== 'king') {
+          squares[prevR][prevC] = { ...captured, color: piece.conversion.owner }
+          changed = true
+        }
+      }
+      return changed ? { gameState: { ...gameState, squares } } : null
     },
   },
 

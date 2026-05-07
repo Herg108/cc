@@ -83,6 +83,84 @@ function King({ fill, stroke, strokeWidth = 1.5 }) {
 
 const PIECE_COMPONENTS = { king: King, queen: Queen, rook: Rook, bishop: Bishop, knight: Knight, pawn: Pawn }
 
+function FireIcon() {
+  return (
+    <svg viewBox="0 0 14 16" width={13} height={13}>
+      <path d="M7,15 C3,15 0.5,12 0.5,8.5 C0.5,5.5 2,3.5 4,1.5 C4,4 5.5,5.5 5.5,5.5 C5.5,3 6.5,0.5 9,0 C10.5,3 13.5,5 13.5,8.5 C13.5,12 11,15 7,15 Z" fill="#c85010" />
+      <path d="M7,13 C4.5,13 2.5,11 2.5,8.5 C2.5,6.5 3.5,5 5.5,3.5 C5.5,5.5 6.5,6.5 6.5,6.5 C6.5,4.5 7.5,3 9,2 C10,4.5 11.5,6 11.5,8.5 C11.5,11 9.5,13 7,13 Z" fill="#e87818" />
+      <path d="M7,11 C5.5,11 4.5,9.5 4.5,8.5 C4.5,7 5.5,6 6.5,5 C6.5,6.5 7.5,7.5 7.5,7.5 C7.5,6 8,5 9,4 C9.5,6 10.5,7 10.5,8.5 C10.5,10 9,11 7,11 Z" fill="#d4a040" />
+    </svg>
+  )
+}
+
+function WraparoundIcon() {
+  return (
+    <svg viewBox="0 0 14 14" width={13} height={13}>
+      {/* 300° clockwise arc */}
+      <path d="M7,2 A5,5 0 1,1 2.7,4.5"
+        fill="none" stroke="#d4a040" strokeWidth="2" strokeLinecap="round"/>
+      {/* arrowhead aligned to tangent (0.5, -0.866) at endpoint */}
+      <path d="M3.6,6.0 L2.7,4.5 L1.1,5.5"
+        fill="none" stroke="#d4a040" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function ConversionIcon() {
+  return (
+    <svg viewBox="0 0 14 14" width={13} height={13}>
+      <path d="M3,4.5 Q3,1.5 7,1.5 Q11,1.5 11,4.5"
+        fill="none" stroke="#c060e0" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M9.5,4.5 L11,6 L12.5,4.5"
+        fill="none" stroke="#c060e0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M11,9.5 Q11,12.5 7,12.5 Q3,12.5 3,9.5"
+        fill="none" stroke="#c060e0" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M4.5,9.5 L3,8 L1.5,9.5"
+        fill="none" stroke="#c060e0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function BoomerangIcon({ color }) {
+  return (
+    <svg viewBox="0 0 16 16" width={13} height={13}>
+      <path d="M3,15 C4,9 7,4 8,2.5 C9.5,3.5 12.5,5.5 14,8"
+        fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function BombBadge({ count }) {
+  return (
+    <svg viewBox="0 0 20 20" width={17} height={17}>
+      <circle cx="10" cy="12.5" r="7" fill="#aa1500" stroke="#dd3322" strokeWidth="1"/>
+      <path d="M10,5.5 Q12,3.5 13.5,2" fill="none" stroke="#c8a030" strokeWidth="1.5" strokeLinecap="round"/>
+      <circle cx="13.5" cy="1.8" r="1.2" fill="#f0c040"/>
+      <text x="10" y="12.5" textAnchor="middle" dominantBaseline="central" fontSize="10" fontWeight="bold" fill="#ffcc80" fontFamily="sans-serif">{count}</text>
+    </svg>
+  )
+}
+
+function ShieldBadge({ count }) {
+  return (
+    <svg viewBox="0 0 20 20" width={17} height={17}>
+      {/* outer shield */}
+      <path d="M2,2.5 Q2,1 3.5,1 L16.5,1 Q18,1 18,2.5 L18,11 Q18,16.5 10,19.5 Q2,16.5 2,11 Z"
+        fill="#b88000" stroke="#f0c840" strokeWidth="1"/>
+      {/* inner border */}
+      <path d="M4,3.3 L16,3.3 L16,10.3 Q16,14.3 10,17.3 Q4,14.3 4,10.3 Z"
+        fill="none" stroke="#ffe090" strokeWidth="0.7" opacity="0.55"/>
+      {/* cross dividers — split to leave gap around number */}
+      <line x1="10" y1="3.3" x2="10" y2="4.8" stroke="#ffe090" strokeWidth="0.6" opacity="0.35"/>
+      <line x1="10" y1="14.8" x2="10" y2="17.3" stroke="#ffe090" strokeWidth="0.6" opacity="0.35"/>
+      <line x1="4" y1="8.8" x2="6" y2="8.8" stroke="#ffe090" strokeWidth="0.6" opacity="0.35"/>
+      <line x1="14" y1="8.8" x2="16" y2="8.8" stroke="#ffe090" strokeWidth="0.6" opacity="0.35"/>
+      {/* number */}
+      <text x="10.15" y="9.3" textAnchor="middle" dominantBaseline="central" fontSize="10" fontWeight="bold" fill="#ffe080" fontFamily="sans-serif">{count}</text>
+    </svg>
+  )
+}
+
 const EFFECT_STYLES = {
   lava:      { bg: 'rgba(255, 80, 0, 0.45)' },
   explosion: { bg: 'rgba(255, 220, 0, 0.6)' },
@@ -95,8 +173,8 @@ const EFFECT_STYLES = {
 const FLIP_ARROW = { '↑':'↓','↓':'↑','←':'→','→':'←','↖':'↘','↘':'↖','↗':'↙','↙':'↗' }
 
 const PORTAL_COLORS = {
-  white: { bg: 'rgba(0, 210, 230, 0.55)', text: '#fff' },
-  black: { bg: 'rgba(255, 130, 0, 0.55)',  text: '#fff' },
+  white: { bg: 'rgba(0, 210, 230, 0.55)', text: '#c0f0ff' },
+  black: { bg: 'rgba(255, 130, 0, 0.55)',  text: '#ffe8a0' },
 }
 
 export default function Board({ gameState, onMove, disabled, ownModifiers = [], attackerModifiers = [], activationSelectMode = null, onActivationClick, flipped = false }) {
@@ -210,7 +288,7 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
                             pointerEvents: 'none',
                             zIndex: 2,
                           }}>
-                            <span style={{ fontSize: 16, fontWeight: 900, color: pc.text, lineHeight: 1, zIndex: 3, textShadow: '0 1px 3px rgba(0,0,0,0.7)' }}>
+                            <span style={{ fontSize: 16, fontWeight: 900, color: pc.text, lineHeight: 1, zIndex: 3, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
                               {flipped ? (FLIP_ARROW[effect.label] ?? effect.label) : effect.label}
                             </span>
                           </div>
@@ -248,36 +326,38 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
                         <div style={{ position: 'absolute', bottom: 0, right: 0, width: 0, height: 0, borderBottom: '18px solid rgba(212, 160, 64, 0.65)', borderLeft: '18px solid transparent', zIndex: 1, pointerEvents: 'none' }} />
                       </>
                     )}
-                    {[
-                      piece?.invincible && { bg: '#f0c000', color: '#000', label: piece.invincible.movesLeft },
-                      piece?.bomb      && { bg: '#ff2200', color: '#fff', label: piece.bomb.movesLeft },
-                    ].filter(Boolean).map((badge, i) => (
-                      <div key={i} style={{
-                        position: 'absolute', top: 3 + i * 21, right: 3,
-                        background: badge.bg, color: badge.color,
-                        borderRadius: '50%', width: 18, height: 18,
-                        fontSize: 11, fontWeight: 700,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        zIndex: 5, pointerEvents: 'none',
-                        boxShadow: `0 0 4px ${badge.bg}`,
-                      }}>
-                        {badge.label}
-                      </div>
-                    ))}
-                    {[
-                      squareEffects.some(e => e.type === 'fire') && { content: '🔥', fontSize: 14, color: null },
-                      piece?.boomerang && { content: '↩', fontSize: 12, color: piece.boomerang.isBoomerang ? '#ff3300' : '#ffffff' },
-                      piece?.wraparound && { content: '↔', fontSize: 13, color: '#00ccff' },
-                    ].filter(Boolean).map((ind, i) => (
-                      <div key={i} style={{
-                        position: 'absolute', top: 3 + i * 19, left: 3,
-                        fontSize: ind.fontSize, lineHeight: 1,
-                        zIndex: 5, pointerEvents: 'none',
-                        ...(ind.color ? { color: ind.color, textShadow: '0 1px 3px rgba(0,0,0,0.8)' } : {}),
-                      }}>
-                        {ind.content}
-                      </div>
-                    ))}
+                    {(piece?.pieceBadges || [])
+                      .filter(type => (type === 'invincible' && piece.invincible) || (type === 'bomb' && piece.bomb))
+                      .map((type, i) => {
+                        const el = type === 'invincible'
+                          ? <ShieldBadge count={piece.invincible.movesLeft} />
+                          : <BombBadge count={piece.bomb.movesLeft} />
+                        return (
+                          <div key={type} style={{ position: 'absolute', top: 3 + i * 22, right: 3, zIndex: 5, pointerEvents: 'none', lineHeight: 0 }}>
+                            {el}
+                          </div>
+                        )
+                      })
+                    }
+                    {(piece?.pieceEffects || []).map((effect, i) => {
+                      let ind = null
+                      if (effect === 'ignition')   ind = { element: <FireIcon /> }
+                      if (effect === 'boomerang')  ind = { element: <BoomerangIcon color={piece.boomerang?.isBoomerang ? '#c85010' : '#f0e8d8'} /> }
+                      if (effect === 'wraparound') ind = { element: <WraparoundIcon /> }
+                      if (effect === 'conversion') ind = { element: <ConversionIcon /> }
+                      if (!ind) return null
+                      return (
+                        <div key={i} style={{
+                          position: 'absolute', top: 3 + i * 17, left: 3,
+                          width: 15, height: 15,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          zIndex: 5, pointerEvents: 'none',
+                          ...(ind.color ? { color: ind.color, fontSize: ind.fontSize, lineHeight: 1, textShadow: '0 1px 3px rgba(0,0,0,0.8)' } : {}),
+                        }}>
+                          {ind.element ?? ind.content}
+                        </div>
+                      )
+                    })}
                     {piece && (() => {
                       const PieceComp = PIECE_COMPONENTS[piece.type]
                       return PieceComp ? (

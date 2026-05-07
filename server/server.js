@@ -147,7 +147,8 @@ io.on('connection', (socket) => {
     const piece = game.squares[fromR][fromC]
     if (!piece || piece.color !== playerColor) return
 
-    const move = { fromR, fromC, toR, toC, piece, color: piece.color }
+    const capturedPiece = game.squares[toR][toC]
+    const move = { fromR, fromC, toR, toC, piece, color: piece.color, capturedPiece }
 
     let next = applyMove(game, fromR, fromC, toR, toC)
 
