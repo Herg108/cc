@@ -31,9 +31,9 @@ export default function Lobby({ socket, onJoined }) {
     <div style={{
       minHeight: '100vh', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
-      background: '#1a1a2e', color: '#ccc',
+      background: '#1a1510', color: '#a89070',
     }}>
-      <h1 style={{ fontSize: 38, fontWeight: 900, color: '#fff', margin: '0 0 48px', letterSpacing: 2 }}>
+      <h1 style={{ fontSize: 38, fontWeight: 900, color: '#f0e8d8', margin: '0 0 48px', letterSpacing: 2 }}>
         Chaos Chess
       </h1>
 
@@ -45,16 +45,16 @@ export default function Lobby({ socket, onJoined }) {
             <button style={btnStyle} onClick={createGame}>Create</button>
           ) : (
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 12, color: '#666', marginBottom: 10, letterSpacing: 1 }}>SHARE THIS CODE</div>
-              <div style={{ fontSize: 42, fontWeight: 900, letterSpacing: 10, textIndent: 10, color: '#fff', marginBottom: 12 }}>
+              <div style={{ fontSize: 12, color: '#6a5a48', marginBottom: 10, letterSpacing: 1 }}>SHARE THIS CODE</div>
+              <div style={{ fontSize: 42, fontWeight: 900, letterSpacing: 10, textIndent: 10, color: '#f0e8d8', marginBottom: 12 }}>
                 {createdCode}
               </div>
-              <div style={{ fontSize: 12, color: '#555' }}>Waiting for opponent...</div>
+              <div style={{ fontSize: 12, color: '#6a5a48' }}>Waiting for opponent...</div>
             </div>
           )}
         </div>
 
-        <div style={{ width: 1, background: '#2a3a6a', margin: '0 32px' }} />
+        <div style={{ width: 1, background: '#3d3028', margin: '0 32px' }} />
 
         {/* Join */}
         <div style={cardStyle}>
@@ -68,7 +68,7 @@ export default function Lobby({ socket, onJoined }) {
             onKeyDown={e => e.key === 'Enter' && joinGame()}
           />
           <button style={btnStyle} onClick={joinGame}>Join</button>
-          {error && <div style={{ fontSize: 12, color: '#f66', marginTop: 4 }}>{error}</div>}
+          {error && <div style={{ fontSize: 12, color: '#c05030', marginTop: 4 }}>{error}</div>}
         </div>
       </div>
     </div>
@@ -81,15 +81,15 @@ const cardStyle = {
   gap: 16, minWidth: 200, padding: '8px 16px',
 }
 const cardTitle = {
-  fontSize: 11, color: '#556', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4,
+  fontSize: 11, color: '#6a5a48', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4,
 }
 const btnStyle = {
-  background: '#0f3460', border: '1px solid #1a4a8a', borderRadius: 6,
-  color: '#fff', padding: '10px 28px', cursor: 'pointer', fontSize: 14,
+  background: '#2a1e10', border: '1px solid #5a3e10', borderRadius: 6,
+  color: '#f0e8d8', padding: '10px 28px', cursor: 'pointer', fontSize: 14,
   letterSpacing: 1, transition: 'background 0.15s',
 }
 const inputStyle = {
-  background: '#0f1929', border: '1px solid #2a3a6a', borderRadius: 6,
-  color: '#fff', padding: '10px 8px 10px 16px', fontSize: 24, letterSpacing: 8,
+  background: '#1a1208', border: '1px solid #3d3028', borderRadius: 6,
+  color: '#f0e8d8', padding: '10px 8px 10px 16px', fontSize: 24, letterSpacing: 8,
   width: 130, textAlign: 'center', outline: 'none',
 }

@@ -10,8 +10,8 @@ export default function DraftPhase({ pickingColor, options, activeModifiers, onP
       zIndex: 100,
     }}>
       <div style={{
-        background: '#16213e',
-        border: '2px solid #2a3a6a',
+        background: '#261e18',
+        border: '2px solid #3d3028',
         borderRadius: 12,
         padding: '32px 40px',
         maxWidth: 600,
@@ -20,7 +20,7 @@ export default function DraftPhase({ pickingColor, options, activeModifiers, onP
         flexDirection: 'column',
         gap: 24,
       }}>
-        <h2 style={{ fontSize: 22, color: '#fff', margin: 0 }}>
+        <h2 style={{ fontSize: 22, color: '#f0e8d8', margin: 0 }}>
           Pick a modifier
         </h2>
 
@@ -31,11 +31,11 @@ export default function DraftPhase({ pickingColor, options, activeModifiers, onP
               onClick={() => onPick(mod)}
               style={{
                 flex: 1,
-                background: '#0f3460',
-                border: '1px solid #1a4a8a',
+                background: '#2a1e10',
+                border: '1px solid #5a3e10',
                 borderRadius: 8,
                 padding: '16px 12px',
-                color: '#e0e0e0',
+                color: '#c8b090',
                 cursor: 'pointer',
                 textAlign: 'left',
                 display: 'flex',
@@ -43,18 +43,18 @@ export default function DraftPhase({ pickingColor, options, activeModifiers, onP
                 gap: 8,
                 transition: 'background 0.15s, border-color 0.15s',
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#1a4a8a'; e.currentTarget.style.borderColor = '#4a8ae8' }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#0f3460'; e.currentTarget.style.borderColor = '#1a4a8a' }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#3d2e18'; e.currentTarget.style.borderColor = '#d4a040' }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#2a1e10'; e.currentTarget.style.borderColor = '#5a3e10' }}
             >
-              <span style={{ fontWeight: 700, fontSize: 15, color: '#fff' }}>{mod.name}</span>
-              <span style={{ fontSize: 13, color: '#aaa', lineHeight: 1.4 }}>{mod.description}</span>
+              <span style={{ fontWeight: 700, fontSize: 15, color: '#f0e8d8' }}>{mod.name}</span>
+              <span style={{ fontSize: 13, color: '#8a7060', lineHeight: 1.4 }}>{mod.description}</span>
             </button>
           ))}
         </div>
 
         {activeModifiers.length > 0 && (
           <div>
-            <p style={{ fontSize: 12, color: '#555', marginBottom: 8 }}>Active modifiers:</p>
+            <p style={{ fontSize: 12, color: '#6a5a48', marginBottom: 8 }}>Active modifiers:</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {activeModifiers.map((m, i) => (
                 <span
@@ -63,12 +63,12 @@ export default function DraftPhase({ pickingColor, options, activeModifiers, onP
                   onMouseLeave={() => setTooltip(null)}
                   style={{
                     position: 'relative',
-                    background: '#1a2a4a',
-                    border: '1px solid #2a3a6a',
+                    background: '#261e18',
+                    border: '1px solid #3d3028',
                     borderRadius: 4,
                     padding: '3px 10px',
                     fontSize: 12,
-                    color: '#8ab',
+                    color: '#d4a040',
                     cursor: 'help',
                   }}
                 >
@@ -80,19 +80,19 @@ export default function DraftPhase({ pickingColor, options, activeModifiers, onP
                       left: '50%',
                       transform: 'translateX(-50%)',
                       marginBottom: 6,
-                      background: '#0d1b33',
-                      border: '1px solid #2a3a6a',
+                      background: '#1a1208',
+                      border: '1px solid #3d3028',
                       borderRadius: 6,
                       padding: '8px 10px',
                       fontSize: 12,
-                      color: '#ccc',
+                      color: '#c8b090',
                       lineHeight: 1.5,
                       width: 200,
                       zIndex: 50,
                       pointerEvents: 'none',
                       whiteSpace: 'normal',
                     }}>
-                      <div style={{ fontWeight: 700, color: '#fff', marginBottom: 4 }}>{m.name}</div>
+                      <div style={{ fontWeight: 700, color: '#f0e8d8', marginBottom: 4 }}>{m.name}</div>
                       {m.description}
                     </div>
                   )}

@@ -4,7 +4,8 @@ import './index.css'
 import App from './App.jsx'
 import TestMode from './components/TestMode.jsx'
 
-const Component = window.location.search.includes('test') ? TestMode : App
+const params = window.location.search
+const Component = params.includes('test') ? TestMode : App
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

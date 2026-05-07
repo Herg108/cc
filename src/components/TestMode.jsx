@@ -194,7 +194,7 @@ export default function TestMode() {
     <div className="app">
       <h1 style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         Test Mode
-        <span style={{ fontSize: 13, fontWeight: 400, color: '#555', letterSpacing: 1 }}>DEV</span>
+        <span style={{ fontSize: 13, fontWeight: 400, color: '#6a5a48', letterSpacing: 1 }}>DEV</span>
       </h1>
       <div className="status">{status}</div>
 
@@ -202,32 +202,32 @@ export default function TestMode() {
 
         {/* Modifier panel */}
         <div style={{ width: 200 }}>
-          <div style={{ fontSize: 11, color: '#555', marginBottom: 10, letterSpacing: 1 }}>ADD MODIFIER</div>
+          <div style={{ fontSize: 11, color: '#6a5a48', marginBottom: 10, letterSpacing: 1 }}>ADD MODIFIER</div>
           {ALL_MODIFIERS.map(mod => {
             const whiteHas = active.white.some(m => m.id === mod.id)
             const blackHas = active.black.some(m => m.id === mod.id)
             return (
-              <div key={mod.id} style={{ background: '#1a2a4a', border: '1px solid #2a3a6a', borderRadius: 4, padding: '6px 8px', marginBottom: 6 }}>
-                <div style={{ fontSize: 11, color: '#8ab', marginBottom: 4 }}>{mod.name}</div>
+              <div key={mod.id} style={{ background: '#261e18', border: '1px solid #3d3028', borderRadius: 4, padding: '6px 8px', marginBottom: 6 }}>
+                <div style={{ fontSize: 11, color: '#d4a040', marginBottom: 4 }}>{mod.name}</div>
                 <div style={{ display: 'flex', gap: 4 }}>
                   <button
                     onClick={() => handleActivateModifier(mod, 'white')}
                     disabled={whiteHas}
-                    style={btnStyle(whiteHas ? '#2a2a2a' : '#2a3a5a', whiteHas ? '#444' : '#ccc')}
+                    style={btnStyle(whiteHas ? '#1a1208' : '#2a1e10', whiteHas ? '#3d3028' : '#a89070')}
                   >White</button>
                   <button
                     onClick={() => handleActivateModifier(mod, 'black')}
                     disabled={blackHas}
-                    style={btnStyle(blackHas ? '#2a2a2a' : '#2a3a5a', blackHas ? '#444' : '#ccc')}
+                    style={btnStyle(blackHas ? '#1a1208' : '#2a1e10', blackHas ? '#3d3028' : '#a89070')}
                   >Black</button>
                 </div>
               </div>
             )
           })}
           <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
-            <button onClick={undo} disabled={history.length === 0} style={btnStyle(history.length === 0 ? '#1a1a1a' : '#2a2a3a', history.length === 0 ? '#333' : '#aaa')}>Undo</button>
-            <button onClick={reset} style={btnStyle('#2a2a3a', '#aaa')}>Reset</button>
-            <button onClick={copyPosition} style={btnStyle(copied ? '#1a3a1a' : '#2a2a3a', copied ? '#4f4' : '#aaa')}>{copied ? 'Copied!' : 'Copy Pos'}</button>
+            <button onClick={undo} disabled={history.length === 0} style={btnStyle(history.length === 0 ? '#1a1208' : '#2a1e10', history.length === 0 ? '#3d3028' : '#a89070')}>Undo</button>
+            <button onClick={reset} style={btnStyle('#2a1e10', '#a89070')}>Reset</button>
+            <button onClick={copyPosition} style={btnStyle(copied ? '#1a2e10' : '#2a1e10', copied ? '#80c060' : '#a89070')}>{copied ? 'Copied!' : 'Copy Pos'}</button>
           </div>
         </div>
 
@@ -256,7 +256,7 @@ export default function TestMode() {
 
 function btnStyle(bg, color) {
   return {
-    background: bg, color, border: '1px solid #3a4a6a', borderRadius: 3,
+    background: bg, color, border: '1px solid #3d3028', borderRadius: 3,
     padding: '2px 8px', fontSize: 10, cursor: 'pointer', transition: 'none',
   }
 }
@@ -264,11 +264,11 @@ function btnStyle(bg, color) {
 function ActiveList({ label, mods }) {
   return (
     <div style={{ width: 120, paddingTop: 8 }}>
-      <div style={{ fontSize: 11, color: '#555', marginBottom: 8, letterSpacing: 1 }}>{label.toUpperCase()}</div>
+      <div style={{ fontSize: 11, color: '#6a5a48', marginBottom: 8, letterSpacing: 1 }}>{label.toUpperCase()}</div>
       {mods.length === 0
-        ? <div style={{ fontSize: 11, color: '#333' }}>None</div>
+        ? <div style={{ fontSize: 11, color: '#3d3028' }}>None</div>
         : mods.map((m, i) => (
-          <div key={i} style={{ background: '#1a2a4a', border: '1px solid #2a3a6a', borderRadius: 4, padding: '4px 8px', fontSize: 11, color: '#8ab', marginBottom: 4 }}>
+          <div key={i} style={{ background: '#261e18', border: '1px solid #3d3028', borderRadius: 4, padding: '4px 8px', fontSize: 11, color: '#d4a040', marginBottom: 4 }}>
             {m.name}
           </div>
         ))

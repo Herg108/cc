@@ -69,9 +69,9 @@ export default function App() {
 
   if (!opponentConnected) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#1a1a2e', color: '#ccc', gap: 16 }}>
-        <div style={{ fontSize: 36, fontWeight: 900, letterSpacing: 8, color: '#fff' }}>{gameCode}</div>
-        <div style={{ fontSize: 14, color: '#888' }}>Waiting for opponent...</div>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#1a1510', color: '#a89070', gap: 16 }}>
+        <div style={{ fontSize: 36, fontWeight: 900, letterSpacing: 8, color: '#f0e8d8' }}>{gameCode}</div>
+        <div style={{ fontSize: 14, color: '#6a5a48' }}>Waiting for opponent...</div>
       </div>
     )
   }
@@ -80,7 +80,7 @@ export default function App() {
 
   if (disconnected) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a2e', color: '#ccc' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1510', color: '#8a7060' }}>
         Opponent disconnected
       </div>
     )
@@ -175,9 +175,9 @@ function ModifierList({ label, mods, side = 'left' }) {
 
   return (
     <div style={{ width: 140, paddingTop: 8 }}>
-      <div style={{ fontSize: 12, color: '#555', marginBottom: 8, letterSpacing: 1 }}>{label.toUpperCase()}</div>
+      <div style={{ fontSize: 12, color: '#6a5a48', marginBottom: 8, letterSpacing: 1 }}>{label.toUpperCase()}</div>
       {mods.length === 0
-        ? <div style={{ fontSize: 12, color: '#333' }}>No modifiers</div>
+        ? <div style={{ fontSize: 12, color: '#3d3028' }}>No modifiers</div>
         : mods.map((m, i) => (
           <div
             key={i}
@@ -185,12 +185,12 @@ function ModifierList({ label, mods, side = 'left' }) {
             onMouseLeave={() => setTooltip(null)}
             style={{
               position: 'relative',
-              background: '#1a2a4a',
-              border: '1px solid #2a3a6a',
+              background: '#261e18',
+              border: '1px solid #3d3028',
               borderRadius: 4,
               padding: '4px 8px',
               fontSize: 11,
-              color: '#8ab',
+              color: '#d4a040',
               marginBottom: 4,
               cursor: 'help',
             }}
@@ -204,18 +204,18 @@ function ModifierList({ label, mods, side = 'left' }) {
                 right: side === 'right' ? '100%' : 'auto',
                 marginLeft: side === 'right' ? 0 : 8,
                 marginRight: side === 'right' ? 8 : 0,
-                background: '#0d1b33',
-                border: '1px solid #2a3a6a',
+                background: '#1a1208',
+                border: '1px solid #3d3028',
                 borderRadius: 6,
                 padding: '8px 10px',
                 fontSize: 12,
-                color: '#ccc',
+                color: '#c8b090',
                 lineHeight: 1.5,
                 width: 200,
                 zIndex: 50,
                 pointerEvents: 'none',
               }}>
-                <div style={{ fontWeight: 700, color: '#fff', marginBottom: 4 }}>{m.name}</div>
+                <div style={{ fontWeight: 700, color: '#f0e8d8', marginBottom: 4 }}>{m.name}</div>
                 {m.description}
               </div>
             )}
