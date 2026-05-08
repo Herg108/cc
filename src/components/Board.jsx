@@ -115,6 +115,22 @@ function ConversionIcon() {
   )
 }
 
+function FreezeBadge({ count }) {
+  return (
+    <svg viewBox="0 0 20 20" width={17} height={17}>
+      {/* spiky crystal — alternating spike tips (r=9) and valleys (r=4.5) */}
+      {/* spiky crystal — spikes r=9, valleys r=7 (shallow) */}
+      <polygon points="10,1 13.5,3.9 17.8,5.5 17,10 17.8,14.5 13.5,16.1 10,19 6.5,16.1 2.2,14.5 3,10 2.2,5.5 6.5,3.9"
+        fill="#0d2840" stroke="#60c8ff" strokeWidth="1.5" strokeLinejoin="round"/>
+      {/* inner ring */}
+      <polygon points="10,4.5 12.6,6.1 15.1,7.5 14.5,10 15.1,12.5 12.6,13.9 10,15.5 7.4,13.9 4.9,12.5 5.5,10 4.9,7.5 7.4,6.1"
+        fill="none" stroke="#a0d8ff" strokeWidth="0.5" opacity="0.45"/>
+      {/* number */}
+      <text x="10" y="10" textAnchor="middle" dominantBaseline="central" fontSize="10" fontWeight="bold" fill="#c8f0ff" fontFamily="sans-serif">{count}</text>
+    </svg>
+  )
+}
+
 function BoomerangIcon({ color }) {
   return (
     <svg viewBox="0 0 16 16" width={13} height={13}>
@@ -248,15 +264,18 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
                     ? piece?.color === activationSelectMode.color
                     : activationSelectMode.selectMode === 'anyPiece'
                       ? !!piece
-                      : activationSelectMode.selectMode === 'emptySquare'
-                        ? !piece
-                        : false
+                      : activationSelectMode.selectMode === 'opponentPiece'
+                        ? !!piece && piece.color !== activationSelectMode.color
+                        : activationSelectMode.selectMode === 'emptySquare'
+                          ? !piece
+                          : false
                 )
 
                 let bg = light ? '#6b5d52' : '#4a3f35'
                 if (isSel) bg = light ? '#7a6820' : '#5a4e18'
                 else if (isActivationTarget && activationSelectMode.selectMode === 'piece') bg = light ? '#7a4a30' : '#5a3020'
                 else if (isActivationTarget && activationSelectMode.selectMode === 'anyPiece') bg = light ? '#7a4a30' : '#5a3020'
+                else if (isActivationTarget && activationSelectMode.selectMode === 'opponentPiece') bg = light ? '#2a5a6a' : '#1a3a4a'
                 else if (isActivationTarget && activationSelectMode.selectMode === 'emptySquare') bg = light ? '#5a3a6a' : '#3a2050'
                 else if (isLegal && !isCapture) bg = light ? '#5e5430' : '#3e3818'
 
@@ -348,11 +367,13 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
                       </>
                     )}
                     {(piece?.pieceBadges || [])
-                      .filter(type => (type === 'invincible' && piece.invincible) || (type === 'bomb' && piece.bomb))
+                      .filter(type => (type === 'invincible' && piece.invincible) || (type === 'bomb' && piece.bomb) || (type === 'freeze' && piece.freeze))
                       .map((type, i) => {
                         const el = type === 'invincible'
                           ? <ShieldBadge count={piece.invincible.movesLeft} />
-                          : <BombBadge count={piece.bomb.movesLeft} />
+                          : type === 'bomb'
+                            ? <BombBadge count={piece.bomb.movesLeft} />
+                            : <FreezeBadge count={piece.freeze.movesLeft} />
                         return (
                           <div key={type} style={{ position: 'absolute', top: 3 + i * 22, right: 3, zIndex: 5, pointerEvents: 'none', lineHeight: 0 }}>
                             {el}

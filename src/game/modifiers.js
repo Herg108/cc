@@ -885,6 +885,55 @@ export const ALL_MODIFIERS = [
   },
 
   {
+    id: 'freeze',
+    name: 'Freeze',
+    description: "Freeze one of your opponent's pieces for 5 moves. A frozen piece cannot move.",
+    selectMode: 'opponentPiece',
+    globalEffect: true,
+
+    onActivate(gameState, color) {
+      return { ...gameState, modifierData: { ...(gameState.modifierData || {}), [`freeze_${color}`]: { awaitingSelection: true } } }
+    },
+
+    getSelectionPrompt() { return "Click an opponent's piece to freeze it" },
+
+    handleActivationClick(gameState, r, c, color) {
+      const piece = gameState.squares[r][c]
+      if (!piece || piece.color === color) return null
+      const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
+      squares[r][c] = { ...piece, freeze: { movesLeft: 5 }, pieceBadges: [...(piece.pieceBadges || []), 'freeze'] }
+      return { gameState: { ...gameState, squares }, done: true }
+    },
+
+    modifyMoves(moves, piece) {
+      if (piece.freeze?.movesLeft > 0) return []
+      return moves
+    },
+
+    onAfterMove(gameState, move, color) {
+      if (move.color === color) return gameState  // only decrement when the frozen player moves
+      const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
+      let changed = false
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const piece = squares[r][c]
+          if (piece?.freeze?.movesLeft > 0) {
+            const movesLeft = piece.freeze.movesLeft - 1
+            if (movesLeft === 0) {
+              const { freeze, ...rest } = piece
+              squares[r][c] = { ...rest, pieceBadges: (rest.pieceBadges || []).filter(b => b !== 'freeze') }
+            } else {
+              squares[r][c] = { ...piece, freeze: { movesLeft } }
+            }
+            changed = true
+          }
+        }
+      }
+      return changed ? { ...gameState, squares } : gameState
+    },
+  },
+
+  {
     id: 'dispel',
     name: 'Dispel',
     description: 'Remove all modifier effects from any piece on the board.',
