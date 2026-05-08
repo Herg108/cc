@@ -421,7 +421,7 @@ export const ALL_MODIFIERS = [
   {
     id: 'ignition',
     name: 'Ignition',
-    description: 'Set one of your pieces on fire. Its square is always burning. When it moves, every square along its path catches fire for one turn — any unignited piece that steps on fire is destroyed.',
+    description: 'Set one of your pieces on fire. Its square is always burning. When it moves, every square along its path catches fire for one turn and any unignited piece that steps on fire is destroyed.',
     selectMode: 'piece',
     globalEffect: true,
 
@@ -930,6 +930,140 @@ export const ALL_MODIFIERS = [
         }
       }
       return changed ? { ...gameState, squares } : gameState
+    },
+  },
+
+  {
+    id: 'gravity_left',
+    name: 'Westerly Wind',
+    description: 'All pieces slide to the leftmost available square in their row. Portals are not in effect during this shift.',
+
+    onActivate(gameState) {
+      const fireSet = new Set((gameState.boardEffects || []).filter(e => e.type === 'fire').map(e => `${e.r},${e.c}`))
+      const newFires = []
+      const squares = gameState.squares.map((row, r) => {
+        const newRow = Array(8).fill(null)
+        let dest = 0
+        for (let c = 0; c < 8; c++) {
+          if (!row[c]) continue
+          let dies = false
+          if (!row[c].ignition) {
+            for (let fc = dest; fc < c; fc++) {
+              if (fireSet.has(`${r},${fc}`)) { dies = true; break }
+            }
+          }
+          if (!dies) {
+            if (row[c].ignition && dest < c) {
+              for (let fc = dest; fc < c; fc++) newFires.push({ r, c: fc, type: 'fire', owner: row[c].ignition.owner })
+            }
+            newRow[dest] = row[c]; dest++
+          }
+        }
+        return newRow
+      })
+      const boardEffects = [...(gameState.boardEffects || []), ...newFires]
+      return { ...gameState, squares, boardEffects }
+    },
+  },
+
+  {
+    id: 'gravity_right',
+    name: 'Easterly Wind',
+    description: 'All pieces slide to the rightmost available square in their row. Portals are not in effect during this shift.',
+
+    onActivate(gameState) {
+      const fireSet = new Set((gameState.boardEffects || []).filter(e => e.type === 'fire').map(e => `${e.r},${e.c}`))
+      const newFires = []
+      const squares = gameState.squares.map((row, r) => {
+        const newRow = Array(8).fill(null)
+        let dest = 7
+        for (let c = 7; c >= 0; c--) {
+          if (!row[c]) continue
+          let dies = false
+          if (!row[c].ignition) {
+            for (let fc = c + 1; fc <= dest; fc++) {
+              if (fireSet.has(`${r},${fc}`)) { dies = true; break }
+            }
+          }
+          if (!dies) {
+            if (row[c].ignition && dest > c) {
+              for (let fc = c + 1; fc <= dest; fc++) newFires.push({ r, c: fc, type: 'fire', owner: row[c].ignition.owner })
+            }
+            newRow[dest] = row[c]; dest--
+          }
+        }
+        return newRow
+      })
+      const boardEffects = [...(gameState.boardEffects || []), ...newFires]
+      return { ...gameState, squares, boardEffects }
+    },
+  },
+
+  {
+    id: 'column_swap',
+    name: 'Flip Flop',
+    description: 'Two random columns of the chessboard are swapped.',
+
+    onActivate(gameState, color) {
+      const c1 = Math.floor(Math.random() * 8)
+      let c2
+      do { c2 = Math.floor(Math.random() * 8) } while (c2 === c1)
+      const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
+      for (let r = 0; r < 8; r++) {
+        [squares[r][c1], squares[r][c2]] = [squares[r][c2], squares[r][c1]]
+      }
+      const boardEffects = (gameState.boardEffects || []).map(e => {
+        if (e.c === c1) return { ...e, c: c2 }
+        if (e.c === c2) return { ...e, c: c1 }
+        return e
+      })
+      return { ...gameState, squares, boardEffects }
+    },
+  },
+
+  {
+    id: 'rotate_cw',
+    name: 'Cyclone',
+    description: 'The entire board rotates 90° clockwise. Pawns that land on a promotion square become queens.',
+
+    onActivate(gameState) {
+      const squares = Array.from({ length: 8 }, () => Array(8).fill(null))
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const piece = gameState.squares[r][c]
+          if (!piece) continue
+          const newR = c, newC = 7 - r
+          const p = piece.type === 'pawn' && ((piece.color === 'white' && newR === 0) || (piece.color === 'black' && newR === 7))
+            ? { ...piece, type: 'queen' }
+            : piece
+          squares[newR][newC] = p
+        }
+      }
+      const boardEffects = (gameState.boardEffects || []).map(e => ({ ...e, r: e.c, c: 7 - e.r }))
+      return { ...gameState, squares, boardEffects }
+    },
+  },
+
+  {
+    id: 'rotate_ccw',
+    name: 'Hurricane',
+    description: 'The entire board rotates 90° counterclockwise. Pawns that land on a promotion square become queens.',
+
+    onActivate(gameState) {
+      const squares = Array.from({ length: 8 }, () => Array(8).fill(null))
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const piece = gameState.squares[r][c]
+          if (!piece) continue
+          const newR = 7 - c, newC = r
+          const p = piece.type === 'pawn' && ((piece.color === 'white' && newR === 0) || (piece.color === 'black' && newR === 7))
+            ? { ...piece, type: 'queen' }
+            : piece
+          squares[newR][newC] = p
+        }
+      }
+      const boardEffects = (gameState.boardEffects || []).map(e => ({ ...e, r: 7 - e.c, c: e.r }))
+      return { ...gameState, squares, boardEffects }
     },
   },
 
