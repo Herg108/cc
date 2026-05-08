@@ -88,14 +88,18 @@ function buildAttackerMods(activeIds, turn) {
   ]
 }
 
+function stateForColor(room, color) {
+  const opponentColor = color === 'white' ? 'black' : 'white'
+  const game = {
+    ...room.game,
+    boardEffects: (room.game.boardEffects || []).filter(e => !(e.type === 'mine' && e.owner === opponentColor)),
+  }
+  return { game, activeIds: room.activeIds, draft: room.draft, customWinner: room.customWinner, movesMadeThisTurn: room.movesMadeThisTurn }
+}
+
 function broadcastState(room) {
-  io.to(room.code).emit('game_state', {
-    game: room.game,
-    activeIds: room.activeIds,
-    draft: room.draft,
-    customWinner: room.customWinner,
-    movesMadeThisTurn: room.movesMadeThisTurn,
-  })
+  if (room.players.white) io.to(room.players.white).emit('game_state', stateForColor(room, 'white'))
+  if (room.players.black) io.to(room.players.black).emit('game_state', stateForColor(room, 'black'))
 }
 
 function initRoom(code, whiteSocketId) {

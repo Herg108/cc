@@ -42,6 +42,8 @@ function getAllPortalPairs(gameState) {
 function applyPortalChain(squares, gameState, fromR, fromC) {
   const pairs = getAllPortalPairs(gameState)
   if (pairs.length === 0) return null
+  // Don't chain if the landing square has a mine — mine takes priority over portal
+  if ((gameState.boardEffects || []).some(e => e.type === 'mine' && e.r === fromR && e.c === fromC)) return null
 
   let r = fromR, c = fromC
   const visited = new Set([`${r},${c}`])
@@ -81,6 +83,8 @@ function applyPortalChain(squares, gameState, fromR, fromC) {
       break
     }
     if (!teleported) break
+    // Stop chain if this hop landed on a mine — mine fires in onAfterMove
+    if ((gameState.boardEffects || []).some(e => e.type === 'mine' && e.r === r && e.c === c)) break
   }
 
   return positions.length > 0 ? { positions, captures } : null
@@ -180,6 +184,76 @@ export const ALL_MODIFIERS = [
       }
     },
 
+  },
+
+  {
+    id: 'landmine',
+    name: 'Landmine',
+    description: 'Place a mine on any empty square in rows 3–6. The first piece to step on it — friend or foe — triggers a 3×3 explosion.',
+    selectMode: 'emptySquare',
+    globalEffect: true,
+
+    onActivate(gameState, color) {
+      return {
+        ...gameState,
+        modifierData: { ...gameState.modifierData, [`landmine_${color}`]: { awaitingSelection: true } },
+      }
+    },
+
+    getSelectionPrompt() {
+      return 'Click an empty square in rows 3–6 to plant the mine'
+    },
+
+    handleActivationClick(gameState, r, c, color) {
+      if (r < 2 || r > 5) return null
+      if (gameState.squares[r][c]) return null
+      return {
+        gameState: {
+          ...gameState,
+          modifierData: { ...gameState.modifierData, [`landmine_${color}`]: { awaitingSelection: false } },
+          boardEffects: [...(gameState.boardEffects || []), { r, c, type: 'mine', owner: color }],
+        },
+        done: true,
+      }
+    },
+
+    onAfterMove(gameState, move, color) {
+      const finalR = move.finalR ?? move.toR
+      const finalC = move.finalC ?? move.toC
+      const boardEffects = gameState.boardEffects || []
+      // Check all positions the piece passed through: initial landing + every portal hop
+      const visited = [{ r: move.toR, c: move.toC }, ...(move.portalPositions || [])]
+      const mine = boardEffects.find(e => e.type === 'mine' && e.owner === color &&
+        visited.some(p => p.r === e.r && p.c === e.c))
+      if (!mine) return gameState
+
+      const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
+
+      // If piece ended up somewhere other than the mine, kill it there too
+      if ((finalR !== mine.r || finalC !== mine.c) && squares[finalR][finalC] && !squares[finalR][finalC].invincible) {
+        squares[finalR][finalC] = null
+      }
+
+      const explosionEffects = []
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          const nr = mine.r + dr, nc = mine.c + dc
+          if (nr < 0 || nr > 7 || nc < 0 || nc > 7) continue
+          explosionEffects.push({ r: nr, c: nc, type: 'explosion' })
+          const p = squares[nr][nc]
+          if (p && !p.invincible) squares[nr][nc] = null
+        }
+      }
+
+      return {
+        ...gameState,
+        squares,
+        boardEffects: [
+          ...boardEffects.filter(e => !(e.type === 'mine' && e.owner === color && e.r === mine.r && e.c === mine.c)),
+          ...explosionEffects,
+        ],
+      }
+    },
   },
 
   {

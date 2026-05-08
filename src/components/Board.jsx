@@ -168,6 +168,7 @@ const EFFECT_STYLES = {
   ice:       { bg: 'rgba(100, 200, 255, 0.35)' },
   poison:    { bg: 'rgba(100, 255, 80, 0.35)' },
   void:      { bg: 'rgba(80, 0, 180, 0.5)' },
+  mine:      { bg: 'rgba(180, 30, 30, 0.3)' },
 }
 
 const FLIP_ARROW = { '↑':'↓','↓':'↑','←':'→','→':'←','↖':'↘','↘':'↖','↗':'↙','↙':'↗' }
@@ -277,6 +278,29 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
                     }}
                   >
                     {squareEffects.map((effect, i) => {
+                      if (effect.type === 'mine') {
+                        const mc = effect.owner === 'white' ? '#ffaaaa' : '#ffcc88'
+                        return (
+                          <div key={i} style={{
+                            position: 'absolute', inset: 0,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            pointerEvents: 'none', zIndex: 2,
+                          }}>
+                            <svg viewBox="0 0 20 20" width={22} height={22}>
+                              <circle cx="10" cy="10" r="7" fill="#6a1010" stroke={mc} strokeWidth="1.2"/>
+                              <line x1="10" y1="1" x2="10" y2="3.5" stroke={mc} strokeWidth="1.5" strokeLinecap="round"/>
+                              <line x1="10" y1="16.5" x2="10" y2="19" stroke={mc} strokeWidth="1.5" strokeLinecap="round"/>
+                              <line x1="1" y1="10" x2="3.5" y2="10" stroke={mc} strokeWidth="1.5" strokeLinecap="round"/>
+                              <line x1="16.5" y1="10" x2="19" y2="10" stroke={mc} strokeWidth="1.5" strokeLinecap="round"/>
+                              <line x1="3.2" y1="3.2" x2="5" y2="5" stroke={mc} strokeWidth="1.5" strokeLinecap="round"/>
+                              <line x1="15" y1="15" x2="16.8" y2="16.8" stroke={mc} strokeWidth="1.5" strokeLinecap="round"/>
+                              <line x1="16.8" y1="3.2" x2="15" y2="5" stroke={mc} strokeWidth="1.5" strokeLinecap="round"/>
+                              <line x1="5" y1="15" x2="3.2" y2="16.8" stroke={mc} strokeWidth="1.5" strokeLinecap="round"/>
+                              <circle cx="10" cy="10" r="3" fill={mc} opacity="0.6"/>
+                            </svg>
+                          </div>
+                        )
+                      }
                       if (effect.type === 'portal') {
                         const pc = PORTAL_COLORS[effect.owner] ?? PORTAL_COLORS.white
                         return (
