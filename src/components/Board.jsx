@@ -96,12 +96,10 @@ function FireIcon() {
 function WraparoundIcon() {
   return (
     <svg viewBox="0 0 14 14" width={13} height={13}>
-      {/* 300° clockwise arc */}
-      <path d="M7,2 A5,5 0 1,1 2.7,4.5"
-        fill="none" stroke="#d4a040" strokeWidth="2" strokeLinecap="round"/>
-      {/* arrowhead aligned to tangent (0.5, -0.866) at endpoint */}
-      <path d="M3.6,6.0 L2.7,4.5 L1.1,5.5"
-        fill="none" stroke="#d4a040" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      {/* pac-man body */}
+      <path d="M7,7 L12.5,4.2 A6,6 0 1,0 12.5,9.8 Z" fill="#d4a040"/>
+      {/* eye */}
+      <circle cx="8" cy="4.2" r="0.9" fill="#1a1510"/>
     </svg>
   )
 }
@@ -109,14 +107,10 @@ function WraparoundIcon() {
 function ConversionIcon() {
   return (
     <svg viewBox="0 0 14 14" width={13} height={13}>
-      <path d="M3,4.5 Q3,1.5 7,1.5 Q11,1.5 11,4.5"
-        fill="none" stroke="#c060e0" strokeWidth="2" strokeLinecap="round"/>
-      <path d="M9.5,4.5 L11,6 L12.5,4.5"
-        fill="none" stroke="#c060e0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M11,9.5 Q11,12.5 7,12.5 Q3,12.5 3,9.5"
-        fill="none" stroke="#c060e0" strokeWidth="2" strokeLinecap="round"/>
-      <path d="M4.5,9.5 L3,8 L1.5,9.5"
-        fill="none" stroke="#c060e0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      {/* staff */}
+      <line x1="11" y1="11" x2="3" y2="3" stroke="#c060e0" strokeWidth="1.8" strokeLinecap="round"/>
+      {/* blade: thicker crescent */}
+      <path d="M4,5 C1,0 8,0 12,2 C9,2 3,4 4,5 Z" fill="#c060e0"/>
     </svg>
   )
 }
@@ -252,14 +246,17 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
                 const isActivationTarget = activationSelectMode && (
                   activationSelectMode.selectMode === 'piece'
                     ? piece?.color === activationSelectMode.color
-                    : activationSelectMode.selectMode === 'emptySquare'
-                      ? !piece
-                      : false
+                    : activationSelectMode.selectMode === 'anyPiece'
+                      ? !!piece
+                      : activationSelectMode.selectMode === 'emptySquare'
+                        ? !piece
+                        : false
                 )
 
                 let bg = light ? '#6b5d52' : '#4a3f35'
                 if (isSel) bg = light ? '#7a6820' : '#5a4e18'
                 else if (isActivationTarget && activationSelectMode.selectMode === 'piece') bg = light ? '#7a4a30' : '#5a3020'
+                else if (isActivationTarget && activationSelectMode.selectMode === 'anyPiece') bg = light ? '#7a4a30' : '#5a3020'
                 else if (isActivationTarget && activationSelectMode.selectMode === 'emptySquare') bg = light ? '#5a3a6a' : '#3a2050'
                 else if (isLegal && !isCapture) bg = light ? '#5e5430' : '#3e3818'
 

@@ -189,7 +189,7 @@ export const ALL_MODIFIERS = [
   {
     id: 'landmine',
     name: 'Landmine',
-    description: 'Place a mine on any empty square in rows 3–6. The first piece to step on it — friend or foe — triggers a 3×3 explosion.',
+    description: 'Place a mine on any empty square in rows 3–6, invisible to your opponent. The first piece to step on it triggers a 3×3 explosion.',
     selectMode: 'emptySquare',
     globalEffect: true,
 
@@ -372,7 +372,7 @@ export const ALL_MODIFIERS = [
       // If the piece stepped onto fire at the portal, it dies there — no teleport
       const piece = gameState.squares[move.toR][move.toC]
       const boardEffects = gameState.boardEffects || []
-      if (piece && !piece.ignition && !piece.invincible && boardEffects.some(e => e.type === 'fire' && e.owner !== piece.color && e.r === move.toR && e.c === move.toC)) {
+      if (piece && !piece.ignition && !piece.invincible && boardEffects.some(e => e.type === 'fire' && e.r === move.toR && e.c === move.toC)) {
         return null
       }
 
@@ -428,7 +428,7 @@ export const ALL_MODIFIERS = [
     modifyMoves(moves, piece, r, c, gameState) {
       if (!['rook', 'bishop', 'queen', 'pawn'].includes(piece.type)) return moves
       if (piece.ignition) return moves  // ignited piece is immune to fire blocking
-      const fires = (gameState.boardEffects || []).filter(e => e.type === 'fire' && e.owner !== piece.color)
+      const fires = (gameState.boardEffects || []).filter(e => e.type === 'fire')
       if (fires.length === 0) return moves
       const fireSet = new Set(fires.map(e => `${e.r},${e.c}`))
 
@@ -524,7 +524,7 @@ export const ALL_MODIFIERS = [
       // Kill opponent piece if it landed on this color's fire (finalR/finalC accounts for portal)
       const fireAtDest = boardEffects.some(e => e.type === 'fire' && e.owner === color && e.r === finalR && e.c === finalC)
       const destPiece = squares[finalR][finalC]
-      if (fireAtDest && destPiece && destPiece.color !== color && !destPiece.ignition && !destPiece.invincible) {
+      if (fireAtDest && destPiece && !destPiece.ignition && !destPiece.invincible) {
         squares[finalR][finalC] = null
         changed = true
       }
@@ -672,7 +672,7 @@ export const ALL_MODIFIERS = [
       const piece = gameState.squares[curR][curC]
       const boardEffects = gameState.boardEffects || []
       if (piece && !piece.ignition && !piece.invincible &&
-          boardEffects.some(e => e.type === 'fire' && e.owner !== piece.color && e.r === curR && e.c === curC)) {
+          boardEffects.some(e => e.type === 'fire' && e.r === curR && e.c === curC)) {
         const squares = gameState.squares.map(row => [...row])
         squares[curR][curC] = null
         return {
@@ -716,7 +716,7 @@ export const ALL_MODIFIERS = [
 
   {
     id: 'wraparound',
-    name: 'Wraparound',
+    name: 'Pac-Man',
     description: 'Choose a piece. It can move off the left or right edge of the board and emerge from the opposite side.',
     selectMode: 'piece',
 
@@ -881,6 +881,38 @@ export const ALL_MODIFIERS = [
         }
       }
       return changed ? { gameState: { ...gameState, squares } } : null
+    },
+  },
+
+  {
+    id: 'dispel',
+    name: 'Dispel',
+    description: 'Remove all modifier effects from any piece on the board.',
+    selectMode: 'anyPiece',
+
+    onActivate(gameState, color) {
+      return {
+        ...gameState,
+        modifierData: { ...gameState.modifierData, [`dispel_${color}`]: { awaitingSelection: true } },
+      }
+    },
+
+    getSelectionPrompt() {
+      return 'Click any piece to remove all its effects'
+    },
+
+    handleActivationClick(gameState, r, c) {
+      const piece = gameState.squares[r][c]
+      if (!piece) return null
+      const squares = gameState.squares.map(row => row.map(p => p ? { ...p } : null))
+      const { type, color: pieceColor, hasMoved } = squares[r][c]
+      const cleanPiece = { type, color: pieceColor, ...(hasMoved ? { hasMoved } : {}) }
+      const onFire = (gameState.boardEffects || []).some(e => e.type === 'fire' && e.r === r && e.c === c)
+      squares[r][c] = onFire ? null : cleanPiece
+      return {
+        gameState: { ...gameState, squares },
+        done: true,
+      }
     },
   },
 
