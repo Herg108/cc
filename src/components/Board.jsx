@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getLegalMoves } from '../game/validator'
 
 const SQ = 72
@@ -191,10 +191,15 @@ const PORTAL_COLORS = {
 export default function Board({ gameState, onMove, disabled, ownModifiers = [], attackerModifiers = [], activationSelectMode = null, onActivationClick, flipped = false }) {
   const [selected, setSelected] = useState(null)
   const [legalMoves, setLegalMoves] = useState([])
+  const [drag, setDrag] = useState(null)
+  const [dragOver, setDragOver] = useState(null)
+  const boardRef = useRef(null)
 
   useEffect(() => {
     setSelected(null)
     setLegalMoves([])
+    setDrag(null)
+    setDragOver(null)
   }, [gameState])
 
   function handleClick(r, c) {
@@ -230,6 +235,53 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
     }
   }
 
+  function handlePointerDown(e, r, c) {
+    if (activationSelectMode || disabled) return
+    const piece = gameState.squares[r][c]
+    if (!piece || piece.color !== gameState.turn) return
+    e.preventDefault()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    const moves = getLegalMoves(gameState, r, c, ownModifiers, attackerModifiers)
+    setDrag({ piece, fromR: r, fromC: c, x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY, legalMoves: moves })
+    setSelected([r, c])
+    setLegalMoves(moves)
+  }
+
+  function handlePointerMove(e) {
+    if (!drag) return
+    setDrag(d => ({ ...d, x: e.clientX, y: e.clientY }))
+    const rect = boardRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const col = Math.floor((e.clientX - rect.left) / SQ)
+    const row = Math.floor((e.clientY - rect.top) / SQ)
+    if (col >= 0 && col < 8 && row >= 0 && row < 8) {
+      const actualR = flipped ? 7 - row : row
+      const actualC = flipped ? 7 - col : col
+      setDragOver({ r: actualR, c: actualC })
+    } else {
+      setDragOver(null)
+    }
+  }
+
+  function handlePointerUp(e) {
+    if (!drag) return
+    const dx = e.clientX - drag.startX
+    const dy = e.clientY - drag.startY
+    const moved = Math.sqrt(dx * dx + dy * dy) > 6
+    if (moved) {
+      if (dragOver) {
+        const isLegal = drag.legalMoves.some(([lr, lc]) => lr === dragOver.r && lc === dragOver.c)
+        if (isLegal) onMove(drag.fromR, drag.fromC, dragOver.r, dragOver.c)
+      }
+      setSelected(null)
+      setLegalMoves([])
+    } else {
+      handleClick(drag.fromR, drag.fromC)
+    }
+    setDrag(null)
+    setDragOver(null)
+  }
+
   const files = ['a','b','c','d','e','f','g','h']
   const rows = flipped ? [7,6,5,4,3,2,1,0] : [0,1,2,3,4,5,6,7]
   const cols = flipped ? [7,6,5,4,3,2,1,0] : [0,1,2,3,4,5,6,7]
@@ -246,7 +298,7 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
         </div>
 
         <div>
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(8, ${SQ}px)`, gridTemplateRows: `repeat(8, ${SQ}px)`, border: '2px solid #2a2018' }}>
+          <div ref={boardRef} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} style={{ display: 'grid', gridTemplateColumns: `repeat(8, ${SQ}px)`, gridTemplateRows: `repeat(8, ${SQ}px)`, border: '2px solid #2a2018', touchAction: 'none' }}>
             {rows.map(r =>
               cols.map(c => {
                 const piece = gameState.squares[r][c]
@@ -271,6 +323,9 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
                           : false
                 )
 
+                const isDragOver = dragOver?.r === r && dragOver?.c === c
+                const isDragging = drag?.fromR === r && drag?.fromC === c
+
                 let bg = light ? '#6b5d52' : '#4a3f35'
                 if (isSel) bg = light ? '#7a6820' : '#5a4e18'
                 else if (isActivationTarget && activationSelectMode.selectMode === 'piece') bg = light ? '#7a4a30' : '#5a3020'
@@ -278,11 +333,13 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
                 else if (isActivationTarget && activationSelectMode.selectMode === 'opponentPiece') bg = light ? '#2a5a6a' : '#1a3a4a'
                 else if (isActivationTarget && activationSelectMode.selectMode === 'emptySquare') bg = light ? '#5a3a6a' : '#3a2050'
                 else if (isLegal && !isCapture) bg = light ? '#5e5430' : '#3e3818'
+                if (isDragOver && drag && drag.legalMoves.some(([lr, lc]) => lr === r && lc === c)) bg = light ? '#7a6820' : '#5a4e18'
 
                 return (
                   <div
                     key={`${r}-${c}`}
                     onClick={() => handleClick(r, c)}
+                    onPointerDown={(e) => handlePointerDown(e, r, c)}
                     style={{
                       width: SQ, height: SQ,
                       background: bg,
@@ -403,7 +460,7 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
                     {piece && (() => {
                       const PieceComp = PIECE_COMPONENTS[piece.type]
                       return PieceComp ? (
-                        <div style={{ zIndex: 4, lineHeight: 0, pointerEvents: 'none' }}>
+                        <div style={{ zIndex: 4, lineHeight: 0, pointerEvents: 'none', opacity: isDragging ? 0.25 : 1 }}>
                           <PieceComp {...GHOST[piece.color]} />
                         </div>
                       ) : null
@@ -421,6 +478,25 @@ export default function Board({ gameState, onMove, disabled, ownModifiers = [], 
           </div>
         </div>
       </div>
+
+      {drag && (() => {
+        const PieceComp = PIECE_COMPONENTS[drag.piece.type]
+        return PieceComp ? (
+          <div style={{
+            position: 'fixed',
+            left: drag.x - SQ / 2,
+            top: drag.y - SQ / 2,
+            width: SQ, height: SQ,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            pointerEvents: 'none',
+            zIndex: 1000,
+            opacity: 0.9,
+            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.6))',
+          }}>
+            <PieceComp {...GHOST[drag.piece.color]} />
+          </div>
+        ) : null
+      })()}
     </div>
   )
 }
