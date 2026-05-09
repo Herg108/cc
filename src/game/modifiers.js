@@ -222,7 +222,10 @@ export const ALL_MODIFIERS = [
       const finalC = move.finalC ?? move.toC
       const boardEffects = gameState.boardEffects || []
       // Check all positions the piece passed through: initial landing + every portal hop
-      const visited = [{ r: move.toR, c: move.toC }, ...(move.portalPositions || [])]
+      const visited = [
+        ...getMovePath(move).slice(1).map(([r, c]) => ({ r, c })),
+        ...(move.portalPositions || []),
+      ]
       const mine = boardEffects.find(e => e.type === 'mine' && e.owner === color &&
         visited.some(p => p.r === e.r && p.c === e.c))
       if (!mine) return gameState
